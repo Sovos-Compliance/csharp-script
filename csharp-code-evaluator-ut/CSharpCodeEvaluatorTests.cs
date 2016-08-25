@@ -45,6 +45,16 @@ namespace csharp_code_evaluator_ut
     }
 
     [Test]
+    [ExpectedException("Sovos.CSharpCodeEvaluator.ECSharpExpression")]
+    public void ExpressionWithSameParameterTwice_Fails()
+    {
+      var expression = new CSharpExpression("1 + a + a");
+      expression.addObjectInScope("a", 1);
+      expression.addObjectInScope("a", 3);
+      Assert.AreEqual(5, expression.execute());
+    }
+
+    [Test]
     public void ExpressionReferencingLocalObject_Success()
     {
       var expression = new CSharpExpression("1 + obj.int_Field");

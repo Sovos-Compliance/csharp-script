@@ -8,6 +8,14 @@ using Microsoft.CSharp;
 
 namespace Sovos.CSharpCodeEvaluator
 {
+  // ReSharper disable once InconsistentNaming
+  public class ECSharpExpression : Exception
+  {
+    public ECSharpExpression(string msg)
+    {
+    }
+  }
+
   public class CSharpExpression
   {
     private readonly CSharpCodeProvider codeProvider;
@@ -55,11 +63,18 @@ namespace Sovos.CSharpCodeEvaluator
     public void addObjectInScope(string name, object obj)
     {
       checkCompiled();
+      foreach (var _obj in objectsInScope)
+      {
+        if(string.Compare(_obj.Item1, 0, name, 0, name.Length, true) == 0)
+          throw new ECSharpExpression($"Object in scope named '{name}' already exists");
+      }
       objectsInScope.Add(new Tuple<string, object>(name, obj));
-      if(!compilerParameters.ReferencedAssemblies.Contains(obj.GetType().Assembly.Location))
-        compilerParameters.ReferencedAssemblies.Add(obj.GetType().Assembly.Location);
-      if(!referencesNamespaces.Contains(obj.GetType().Namespace))
-        referencesNamespaces.Add(obj.GetType().Namespace);
+      var assemblyLocation = obj.GetType().Assembly.Location;
+      if (!compilerParameters.ReferencedAssemblies.Contains(assemblyLocation))
+        compilerParameters.ReferencedAssemblies.Add(assemblyLocation);
+      var objectNamespace = obj.GetType().Namespace;
+      if (!referencesNamespaces.Contains(objectNamespace))
+        referencesNamespaces.Add(objectNamespace);
     }
 
     public void addUsedNamespace(string _namespace)
