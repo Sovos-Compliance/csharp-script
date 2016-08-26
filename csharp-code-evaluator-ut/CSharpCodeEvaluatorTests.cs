@@ -16,34 +16,34 @@ namespace csharp_code_evaluator_ut
     public void BasicExpression_Success()
     {
       var expression = new CSharpExpression("1 + 1");
-      Assert.AreEqual(2, expression.execute());
+      Assert.AreEqual(2, expression.Execute());
     }
 
     [Test]
     public void ExpressionWithOneParameter_Success()
     {
       var expression = new CSharpExpression("1 + a");
-      expression.addObjectInScope("a", 1);
-      Assert.AreEqual(2, expression.execute());
+      expression.AddObjectInScope("a", 1);
+      Assert.AreEqual(2, expression.Execute());
     }
 
     [Test]
     public void ExpressionWithOneParameterForceRecompilation_Success()
     {
       var expression = new CSharpExpression("1 + a");
-      expression.addObjectInScope("a", 1);
-      Assert.AreEqual(2, expression.execute());
-      expression.addObjectInScope("b", 2);
-      Assert.AreEqual(2, expression.execute());
+      expression.AddObjectInScope("a", 1);
+      Assert.AreEqual(2, expression.Execute());
+      expression.AddObjectInScope("b", 2);
+      Assert.AreEqual(2, expression.Execute());
     }
 
     [Test]
     public void ExpressionWithTwoParameters_Success()
     {
       var expression = new CSharpExpression("1 + a + c");
-      expression.addObjectInScope("a", 1);
-      expression.addObjectInScope("c", 3);
-      Assert.AreEqual(5, expression.execute());
+      expression.AddObjectInScope("a", 1);
+      expression.AddObjectInScope("c", 3);
+      Assert.AreEqual(5, expression.Execute());
     }
 
     [Test]
@@ -51,9 +51,9 @@ namespace csharp_code_evaluator_ut
     public void ExpressionWithSameParameterTwice_Fails()
     {
       var expression = new CSharpExpression("1 + a + a");
-      expression.addObjectInScope("a", 1);
-      expression.addObjectInScope("a", 3);
-      Assert.AreEqual(5, expression.execute());
+      expression.AddObjectInScope("a", 1);
+      expression.AddObjectInScope("a", 3);
+      Assert.AreEqual(5, expression.Execute());
     }
 
     [Test]
@@ -61,8 +61,8 @@ namespace csharp_code_evaluator_ut
     {
       var expression = new CSharpExpression("1 + obj.int_Field");
       var obj = new TestClass {int_Field = 2};
-      expression.addObjectInScope("obj", obj);
-      Assert.AreEqual(3, expression.execute());
+      expression.AddObjectInScope("obj", obj);
+      Assert.AreEqual(3, expression.Execute());
     }
 
     [Test]
@@ -71,17 +71,17 @@ namespace csharp_code_evaluator_ut
       var expression = new CSharpExpression("obj2.int_Field + obj1.int_Field");
       var obj1 = new TestClass { int_Field = 2 };
       var obj2 = new TestClass { int_Field = 3 };
-      expression.addObjectInScope("obj1", obj1);
-      expression.addObjectInScope("obj2", obj2);
-      Assert.AreEqual(5, expression.execute());
+      expression.AddObjectInScope("obj1", obj1);
+      expression.AddObjectInScope("obj2", obj2);
+      Assert.AreEqual(5, expression.Execute());
     }
 
     [Test]
     public void ExecuteBasicExpressionTwice_Success()
     {
       var expression = new CSharpExpression("1 + 1");
-      Assert.AreEqual(2, expression.execute());
-      Assert.AreEqual(2, expression.execute());
+      Assert.AreEqual(2, expression.Execute());
+      Assert.AreEqual(2, expression.Execute());
     }
 
     [Test]
@@ -89,10 +89,10 @@ namespace csharp_code_evaluator_ut
     {
       var expression = new CSharpExpression("1 + obj.int_Field");
       var obj = new TestClass { int_Field = 2 };
-      expression.addObjectInScope("obj", obj);
-      Assert.AreEqual(3, expression.execute());
+      expression.AddObjectInScope("obj", obj);
+      Assert.AreEqual(3, expression.Execute());
       obj.int_Field = 5;
-      Assert.AreEqual(6, expression.execute());
+      Assert.AreEqual(6, expression.Execute());
     }
 
     [Test]
@@ -101,8 +101,8 @@ namespace csharp_code_evaluator_ut
       var expression = new CSharpExpression("1 + obj.int_Field");
       IDictionary<string, object> obj = new ExpandoObject();
       obj.Add("int_Field", 2);
-      expression.addObjectInScope("obj", obj);
-      Assert.AreEqual(3, expression.execute());
+      expression.AddObjectInScope("obj", obj);
+      Assert.AreEqual(3, expression.Execute());
     }
 
     [Test]
@@ -111,11 +111,11 @@ namespace csharp_code_evaluator_ut
       var expression = new CSharpExpression("1 + obj.int_Field");
       IDictionary<string, object> obj = new ExpandoObject();
       obj.Add("int_Field", 2);
-      expression.addObjectInScope("obj", obj);
-      Assert.AreEqual(3, expression.execute());
+      expression.AddObjectInScope("obj", obj);
+      Assert.AreEqual(3, expression.Execute());
       dynamic dynObj = obj;
       dynObj.int_Field = 3;
-      Assert.AreEqual(4, expression.execute());
+      Assert.AreEqual(4, expression.Execute());
     }
   }
 }

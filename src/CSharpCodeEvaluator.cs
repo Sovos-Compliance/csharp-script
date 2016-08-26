@@ -56,22 +56,22 @@ namespace Sovos.CSharpCodeEvaluator
       expression = Expression;
     }
 
-    private void invalidateIfCompiled()
+    private void InvalidateIfCompiled()
     {
       // ReSharper disable once RedundantCheckBeforeAssignment
       if (state == State.NotCompiled) return;
       state = State.NotCompiled;
     }
 
-    public void addReferencedAssembly(string assemblyName)
+    public void AddReferencedAssembly(string assemblyName)
     {
-      invalidateIfCompiled();
+      InvalidateIfCompiled();
       compilerParameters.ReferencedAssemblies.Add(assemblyName);
     }
 
-    public void addObjectInScope(string name, object obj)
+    public void AddObjectInScope(string name, object obj)
     {
-      invalidateIfCompiled();
+      InvalidateIfCompiled();
       if (objectsInScope.Any(_obj => string.Compare(_obj.Item1, 0, name, 0, name.Length, true) == 0))
         throw new ECSharpExpression($"Object in scope named '{name}' already exists");
       objectsInScope.Add(new Tuple<string, object>(name, obj));
@@ -83,15 +83,15 @@ namespace Sovos.CSharpCodeEvaluator
         usesNamespaces.Add(objectNamespace);
     }
 
-    public void addUsedNamespace(string _namespace)
+    public void AddUsedNamespace(string _namespace)
     {
-      invalidateIfCompiled();
+      InvalidateIfCompiled();
       usesNamespaces.Add(_namespace);
     }
 
-    private void compile()
+    private void Compile()
     {
-      invalidateIfCompiled();
+      InvalidateIfCompiled();
       var sb = new StringBuilder("");
       foreach (var _namespace in usesNamespaces)
       {
@@ -124,9 +124,9 @@ namespace Sovos.CSharpCodeEvaluator
       state = State.Compiled;
     }
 
-    public void prepare()
+    public void Prepare()
     {
-      if (state == State.NotCompiled) compile();
+      if (state == State.NotCompiled) Compile();
 
       state = State.Compiled;
       var a = prg.CompiledAssembly;
@@ -147,10 +147,10 @@ namespace Sovos.CSharpCodeEvaluator
       state = State.Prepared;
     }
 
-    public object execute()
+    public object Execute()
     {
-      if (state == State.NotCompiled) compile();
-      if (state == State.Compiled) prepare();
+      if (state == State.NotCompiled) Compile();
+      if (state == State.Compiled) Prepare();
 
       return runExpressionDelegate();
     }
