@@ -30,6 +30,14 @@ namespace csharp_code_evaluator_ut
     }
 
     [Test]
+    public void VoidReturningCodeSnippet_Success()
+    {
+      var expression = new CSharpExpression();
+      Assert.AreEqual(0, expression.AddVoidReturnCodeSnippet("var i = 1; Console.WriteLine(i)"));
+      Assert.AreEqual(null, expression.Execute());
+    }
+
+    [Test]
     public void TwoBasicExpressions_Success()
     {
       var expression1 = new CSharpExpression("1 + 1");

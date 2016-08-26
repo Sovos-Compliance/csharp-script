@@ -44,7 +44,7 @@ expression.AddCodeSnippet("var i = 1; return 1 + i");
 Assert.AreEqual(2, expression.Execute());
 ```
   
-finally, to for optimal performance in cases where you have thousends of expresions, you want to bundle them together in one instance CSharpExpression class.
+for optimal performance in cases where you have thousends of expressions, you want to bundle them together in one instance CSharpExpression class.
 See this example:
 
 ```C#
@@ -55,4 +55,10 @@ for (var i = 1; i < 1000; i++)
   Assert.AreEqual(i + 1, expression.Execute(i - 1));
 ```
 
-  
+finally, you can run expressions that don't return a value:
+
+```C#
+var expression = new CSharpExpression();
+Assert.AreEqual(0, expression.AddVoidReturnCodeSnippet("var i = 1; Console.WriteLine(i)"));
+Assert.AreEqual(null, expression.Execute());
+```

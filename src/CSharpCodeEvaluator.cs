@@ -111,6 +111,12 @@ namespace Sovos.CSharpCodeEvaluator
       return AddCodeSnippet("return " + Expression);
     }
 
+    public uint AddVoidReturnCodeSnippet(string Expression)
+    {
+      expressions.Add(Expression + ";return null");
+      return expressionCount++;
+    }
+
     public uint AddCodeSnippet(string Expression)
     {
       InvalidateIfCompiled();
