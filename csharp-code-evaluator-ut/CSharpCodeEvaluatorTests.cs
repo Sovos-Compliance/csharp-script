@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Dynamic;
 using NUnit.Framework;
 using Sovos.CSharpCodeEvaluator;
 
@@ -32,6 +29,16 @@ namespace csharp_code_evaluator_ut
     {
       var expression = new CSharpExpression("1 + a");
       expression.addObjectInScope("a", 1);
+      Assert.AreEqual(2, expression.execute());
+    }
+
+    [Test]
+    public void ExpressionWithOneParameterForceRecompilation_Success()
+    {
+      var expression = new CSharpExpression("1 + a");
+      expression.addObjectInScope("a", 1);
+      Assert.AreEqual(2, expression.execute());
+      expression.addObjectInScope("b", 2);
       Assert.AreEqual(2, expression.execute());
     }
 
@@ -91,6 +98,29 @@ namespace csharp_code_evaluator_ut
       Assert.AreEqual(3, expression.execute());
       obj.int_Field = 5;
       Assert.AreEqual(6, expression.execute());
+    }
+
+    [Test]
+    public void ExpressionReferencingExpandoObject_Success()
+    {
+      var expression = new CSharpExpression("1 + obj.int_Field");
+      IDictionary<string, object> obj = new ExpandoObject();
+      obj.Add("int_Field", 2);
+      expression.addObjectInScope("obj", obj);
+      Assert.AreEqual(3, expression.execute());
+    }
+
+    [Test]
+    public void ExpressionReferencingMutableExpandoObject_Success()
+    {
+      var expression = new CSharpExpression("1 + obj.int_Field");
+      IDictionary<string, object> obj = new ExpandoObject();
+      obj.Add("int_Field", 2);
+      expression.addObjectInScope("obj", obj);
+      Assert.AreEqual(3, expression.execute());
+      dynamic dynObj = obj;
+      dynObj.int_Field = 3;
+      Assert.AreEqual(4, expression.execute());
     }
   }
 }
