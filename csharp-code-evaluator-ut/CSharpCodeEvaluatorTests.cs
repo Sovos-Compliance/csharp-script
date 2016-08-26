@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Dynamic;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using Sovos.CSharpCodeEvaluator;
 
@@ -81,6 +83,28 @@ namespace csharp_code_evaluator_ut
     }
 
     [Test]
+    public void RunExpressionTwiceReferencingReplacedLocalObject_Success()
+    {
+      var expression = new CSharpExpression("1 + obj.int_Field");
+      var obj = new TestClass { int_Field = 2 };
+      expression.AddObjectInScope("obj", obj);
+      Assert.AreEqual(3, expression.Execute());
+      var obj2 = new TestClass { int_Field = 3 };
+      expression.ReplaceObjectInScope("obj", obj2);
+      Assert.AreEqual(4, expression.Execute());
+    }
+
+    [Test]
+    [ExpectedException("Sovos.CSharpCodeEvaluator.ECSharpExpression")]
+    public void ReplacedNonExistingLocalObject_Fails()
+    {
+      var expression = new CSharpExpression("1 + obj.int_Field");
+      var obj = new TestClass { int_Field = 2 };
+      expression.ReplaceObjectInScope("obj", obj);
+      Assert.AreEqual(4, expression.Execute());
+    }
+
+    [Test]
     public void ExpressionReferencingTwoLocalObjects_Success()
     {
       var expression = new CSharpExpression("obj2.int_Field + obj1.int_Field");
@@ -131,6 +155,59 @@ namespace csharp_code_evaluator_ut
       dynamic dynObj = obj;
       dynObj.int_Field = 3;
       Assert.AreEqual(4, expression.Execute());
+    }
+
+    [Test]
+    [ExpectedException("System.Data.InvalidExpressionException")]
+    public void ExpressionWithSyntaxError_Fails()
+    {
+      var expression = new CSharpExpression("1 + obj.int_Field");
+      Assert.AreEqual(3, expression.Execute());
+    }
+
+    [Test]
+    public void ShortPerformanceTest_Success()
+    {
+      var expression = new CSharpExpression("1 + obj.int_Field");
+      var obj = new TestClass();
+      expression.AddObjectInScope("obj", obj);
+      var initialTicks = Environment.TickCount;
+      for (obj.int_Field = 1; obj.int_Field < 1000000; obj.int_Field++)
+        Assert.AreEqual(1 + obj.int_Field, expression.Execute());
+      Assert.Less(Environment.TickCount - initialTicks, 1000); // 1MM iterations should run in less than 1 second
+    }
+
+    [Test]
+    public void ExpressionCountPressure_Success()
+    {
+      for (var i = 1; i < 50; i++)
+      {
+        var expression = new CSharpExpression($"{i} + 1");
+        Assert.AreEqual(1 + i, expression.Execute());
+      }
+    }
+
+    private static CSharpExpression Compile(string _expression)
+    {
+      var expression = new CSharpExpression(_expression);
+      expression.Prepare();
+      return expression;
+    }
+
+    [Test]
+    public async void ExpressionParalellCompilation_Success()
+    {
+      var tasks = new Task[4]; // We will compile expressions in 4 threads
+      for (var i = 1; i < 25; i++)
+      {
+        for (var j = 0; j < tasks.Length - 1; j++)
+          tasks[j] = Task.Run(() => Compile("1 + 1"));
+        for (var j = 0; j < tasks.Length - 1; j++)
+        {
+          var expression = await (Task<CSharpExpression>)tasks[j];
+          Assert.AreEqual(2, expression.Execute());
+        }
+      }
     }
   }
 }

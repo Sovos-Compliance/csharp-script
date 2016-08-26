@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Dynamic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using Microsoft.CSharp;
 
@@ -40,16 +39,21 @@ namespace Sovos.CSharpCodeEvaluator
       Prepared = 2
     }
 
+    #region Private Fields
+    private State state;
+    private string expression;
     private CSharpCodeProvider codeProvider;
     private CompilerParameters compilerParameters;
-    private CompilerResults prg;
-    private List<Tuple<string, object>> objectsInScope;
+    private Dictionary<string, object> objectsInScope;
     private List<string> usesNamespaces;
-    private string expression;
-    private RunExpressionDelegate runExpressionDelegate;
-    private object holderObject;
-    private State state;
 
+    // These fields will be != null when there's a valid compiled and prepared expression
+    private RunExpressionDelegate runExpressionDelegate;
+    private CompilerResults prg;
+    private object holderObject;
+    #endregion
+
+    #region Constructors
     public CSharpExpression(string Expression)
     {
       Init(Expression);
@@ -61,7 +65,9 @@ namespace Sovos.CSharpCodeEvaluator
       foreach (var obj in objectsInScope)
         AddObjectInScope(obj.name, obj.obj);
     }
+    #endregion
 
+    #region Private Methods
     private void Init(string Expression)
     {
       codeProvider = new CSharpCodeProvider();
@@ -71,49 +77,61 @@ namespace Sovos.CSharpCodeEvaluator
         GenerateInMemory = true
       };
       compilerParameters.ReferencedAssemblies.Add("SYSTEM.DLL");
-      compilerParameters.ReferencedAssemblies.Add("SYSTEM.CORE.DLL");
-      compilerParameters.ReferencedAssemblies.Add("MICROSOFT.CSHARP.DLL");
-      objectsInScope = new List<Tuple<string, object>>();
-      usesNamespaces = new List<string> { "System", "System.Runtime.CompilerServices" };
+      objectsInScope = new Dictionary<string, object>();
+      usesNamespaces = new List<string> { "System" };
       state = State.NotCompiled;
       expression = Expression;
     }
+
     private void InvalidateIfCompiled()
     {
-      // ReSharper disable once RedundantCheckBeforeAssignment
       if (state == State.NotCompiled) return;
+      holderObject = null;
+      prg = null;
+      runExpressionDelegate = null;
       state = State.NotCompiled;
     }
+    #endregion
 
+    #region Public Methods
     public void AddReferencedAssembly(string assemblyName)
     {
       InvalidateIfCompiled();
-      compilerParameters.ReferencedAssemblies.Add(assemblyName);
+      if (!compilerParameters.ReferencedAssemblies.Contains(assemblyName))
+        compilerParameters.ReferencedAssemblies.Add(assemblyName);
     }
 
     public void AddObjectInScope(string name, object obj)
     {
       InvalidateIfCompiled();
-      if (objectsInScope.Any(_obj => string.Compare(_obj.Item1, 0, name, 0, name.Length, true) == 0))
+      if (objectsInScope.ContainsKey(name))
         throw new ECSharpExpression($"Object in scope named '{name}' already exists");
-      objectsInScope.Add(new Tuple<string, object>(name, obj));
+      objectsInScope.Add(name, obj);
       var assemblyLocation = Path.GetFileName(obj.GetType().Assembly.Location).ToUpper();
-      if (!compilerParameters.ReferencedAssemblies.Contains(assemblyLocation))
-        compilerParameters.ReferencedAssemblies.Add(assemblyLocation);
-      var objectNamespace = obj.GetType().Namespace;
-      if (!usesNamespaces.Contains(objectNamespace))
-        usesNamespaces.Add(objectNamespace);
+      AddReferencedAssembly(assemblyLocation);
+      if (obj is ExpandoObject)
+        AddReferencedAssembly("MICROSOFT.CSHARP.DLL");
+      AddUsedNamespace(obj.GetType().Namespace);
+    }
+
+    public void ReplaceObjectInScope(string name, object obj)
+    {
+      if (!objectsInScope.ContainsKey(name))
+        throw new ECSharpExpression($"Object in scope named '{name}' not found");
+      objectsInScope[name] = obj;
+      holderObject?.GetType().GetField(name).SetValue(holderObject, obj);
     }
 
     public void AddUsedNamespace(string _namespace)
     {
       InvalidateIfCompiled();
-      usesNamespaces.Add(_namespace);
+      if(!usesNamespaces.Contains(_namespace))
+        usesNamespaces.Add(_namespace);
     }
 
-    private void Compile()
+    public void Compile()
     {
-      InvalidateIfCompiled();
+      if (state != State.NotCompiled) return;
       var sb = new StringBuilder("");
       foreach (var _namespace in usesNamespaces)
       {
@@ -126,9 +144,9 @@ namespace Sovos.CSharpCodeEvaluator
       foreach (var objInScope in objectsInScope)
       {
         sb.Append("public ");
-        sb.Append(objInScope.Item2 is ExpandoObject ? "dynamic" : objInScope.Item2.GetType().Name);
+        sb.Append(objInScope.Value is ExpandoObject ? "dynamic" : objInScope.Value.GetType().Name);
         sb.Append(" ");
-        sb.Append(objInScope.Item1);
+        sb.Append(objInScope.Key);
         sb.Append(";");
       }
       sb.Append("    public object Eval() { \n");
@@ -148,33 +166,42 @@ namespace Sovos.CSharpCodeEvaluator
 
     public void Prepare()
     {
-      if (state == State.NotCompiled) Compile();
+      switch (state)
+      {
+        case State.Prepared:
+          return;
+        case State.NotCompiled:
+          Compile();
+          break;
+      }
 
-      state = State.Compiled;
       var a = prg.CompiledAssembly;
       holderObject = a.CreateInstance("Sovos.CodeEvaler.CodeEvaler");
       if (holderObject == null)
         throw new NullReferenceException("Host object in null");
 
       foreach (var obj in objectsInScope)
-        holderObject.GetType().GetField(obj.Item1).SetValue(holderObject, obj.Item2);
+        holderObject.GetType().GetField(obj.Key).SetValue(holderObject, obj.Value);
 
       var t = holderObject.GetType();
       var methodInfo = t.GetMethod("Eval");
       if (methodInfo == null)
         throw new NullReferenceException("methodInfo is null");
-      runExpressionDelegate =
-        (RunExpressionDelegate) methodInfo.CreateDelegate(typeof (RunExpressionDelegate), holderObject);
+      runExpressionDelegate = (RunExpressionDelegate) methodInfo.CreateDelegate(typeof (RunExpressionDelegate), holderObject);
 
       state = State.Prepared;
     }
 
+    public void Unprepare()
+    {
+      InvalidateIfCompiled();
+    }
+
     public object Execute()
     {
-      if (state == State.NotCompiled) Compile();
-      if (state == State.Compiled) Prepare();
-
+      Prepare();
       return runExpressionDelegate();
     }
+    #endregion
   }
 }
