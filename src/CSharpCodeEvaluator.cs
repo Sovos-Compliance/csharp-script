@@ -54,7 +54,6 @@ namespace Sovos.CSharpCodeEvaluator
     private CompilerResults prg;
     private object holderObject;
     private string programText;
-
     #endregion
     
     #region Constructors
