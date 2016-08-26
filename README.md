@@ -16,7 +16,7 @@ public class TestClass
 }
 ```
 
-later someone in code the following can be executed:
+later the following can be executed:
 
 ```C#
 var expression = new CSharpExpression("1 + obj.int_Field");
