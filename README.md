@@ -36,7 +36,7 @@ expression.AddObjectInScope("obj", obj);
 Assert.AreEqual(3, expression.Execute());
 ```
 
-finally, you can also use "code snippets" that do more than just a be an evaluatable expresion:
+you can also use "code snippets" that do more than just a be an evaluatable expresion:
 
 ```C#
 var expression = new CSharpExpression();
