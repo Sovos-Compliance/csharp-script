@@ -44,4 +44,15 @@ expression.AddCodeSnippet("var i = 1; return 1 + i");
 Assert.AreEqual(2, expression.Execute());
 ```
   
+finally, to for optimal performance in cases where you have thousends of expresions, you want to bundle them together in one instance CSharpExpression class.
+See this example:
+
+```C#
+var expression = new CSharpExpression();
+for(var i = 1; i < 1000; i++)
+  Assert.AreEqual(i - 1, expression.AddExpression($"{i} + 1"));
+for (var i = 1; i < 1000; i++)
+  Assert.AreEqual(i + 1, expression.Execute(i - 1));
+```
+
   
