@@ -55,6 +55,13 @@ namespace csharp_code_evaluator_ut
     }
 
     [Test]
+    public void ExpressionWithTwoParametersUsingOverloadConstructor_Success()
+    {
+      var expression = new CSharpExpression("1 + a + c", new[]{ new ObjectInScope("a", 1), new ObjectInScope("c", 3) });
+      Assert.AreEqual(5, expression.Execute());
+    }
+
+    [Test]
     [ExpectedException("Sovos.CSharpCodeEvaluator.ECSharpExpression")]
     public void ExpressionWithSameParameterTwice_Fails()
     {

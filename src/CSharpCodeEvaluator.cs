@@ -18,6 +18,17 @@ namespace Sovos.CSharpCodeEvaluator
     }
   }
 
+  public class ObjectInScope
+  {
+    public string name { get; }
+    public object obj { get; }
+    public ObjectInScope(string name, object obj)
+    {
+      this.name = name;
+      this.obj = obj;
+    }
+  }
+
   public class CSharpExpression
   {
     private delegate object RunExpressionDelegate();
@@ -29,17 +40,29 @@ namespace Sovos.CSharpCodeEvaluator
       Prepared = 2
     }
 
-    private readonly CSharpCodeProvider codeProvider;
-    private readonly CompilerParameters compilerParameters;
+    private CSharpCodeProvider codeProvider;
+    private CompilerParameters compilerParameters;
     private CompilerResults prg;
-    private readonly List<Tuple<string, object>> objectsInScope;
-    private readonly List<string> usesNamespaces;
-    private readonly string expression;
+    private List<Tuple<string, object>> objectsInScope;
+    private List<string> usesNamespaces;
+    private string expression;
     private RunExpressionDelegate runExpressionDelegate;
     private object holderObject;
     private State state;
 
     public CSharpExpression(string Expression)
+    {
+      Init(Expression);
+    }
+
+    public CSharpExpression(string Expression, IEnumerable<ObjectInScope> objectsInScope)
+    {
+      Init(Expression);
+      foreach (var obj in objectsInScope)
+        AddObjectInScope(obj.name, obj.obj);
+    }
+
+    private void Init(string Expression)
     {
       codeProvider = new CSharpCodeProvider();
       compilerParameters = new CompilerParameters
@@ -51,11 +74,10 @@ namespace Sovos.CSharpCodeEvaluator
       compilerParameters.ReferencedAssemblies.Add("SYSTEM.CORE.DLL");
       compilerParameters.ReferencedAssemblies.Add("MICROSOFT.CSHARP.DLL");
       objectsInScope = new List<Tuple<string, object>>();
-      usesNamespaces = new List<string> {"System", "System.Runtime.CompilerServices"};
+      usesNamespaces = new List<string> { "System", "System.Runtime.CompilerServices" };
       state = State.NotCompiled;
       expression = Expression;
     }
-
     private void InvalidateIfCompiled()
     {
       // ReSharper disable once RedundantCheckBeforeAssignment
@@ -99,8 +121,8 @@ namespace Sovos.CSharpCodeEvaluator
         sb.Append(_namespace);
         sb.Append(";\n");
       }
-      sb.Append("namespace CSCodeEvaler { \n");
-      sb.Append("  public class CSCodeEvaler { \n");
+      sb.Append("namespace Sovos.CodeEvaler { \n");
+      sb.Append("  public class CodeEvaler { \n");
       foreach (var objInScope in objectsInScope)
       {
         sb.Append("public ");
@@ -109,7 +131,7 @@ namespace Sovos.CSharpCodeEvaluator
         sb.Append(objInScope.Item1);
         sb.Append(";");
       }
-      sb.Append("    public object EvalCode() { \n");
+      sb.Append("    public object Eval() { \n");
       sb.Append("    return ");
       sb.Append(expression);
       sb.Append("; \n");
@@ -130,7 +152,7 @@ namespace Sovos.CSharpCodeEvaluator
 
       state = State.Compiled;
       var a = prg.CompiledAssembly;
-      holderObject = a.CreateInstance("CSCodeEvaler.CSCodeEvaler");
+      holderObject = a.CreateInstance("Sovos.CodeEvaler.CodeEvaler");
       if (holderObject == null)
         throw new NullReferenceException("Host object in null");
 
@@ -138,7 +160,7 @@ namespace Sovos.CSharpCodeEvaluator
         holderObject.GetType().GetField(obj.Item1).SetValue(holderObject, obj.Item2);
 
       var t = holderObject.GetType();
-      var methodInfo = t.GetMethod("EvalCode");
+      var methodInfo = t.GetMethod("Eval");
       if (methodInfo == null)
         throw new NullReferenceException("methodInfo is null");
       runExpressionDelegate =
