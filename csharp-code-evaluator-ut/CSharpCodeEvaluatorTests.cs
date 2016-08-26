@@ -8,11 +8,6 @@ namespace csharp_code_evaluator_ut
   public class TestClass
   {
     public int int_Field;
-
-    public TestClass()
-    {
-      int_Field = 0;
-    }
   }
 
   public class CSharpCodeEvaluatorTests
