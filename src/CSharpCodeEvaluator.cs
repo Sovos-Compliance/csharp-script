@@ -30,31 +30,35 @@ namespace Sovos.CSharpCodeEvaluator
 
   public class CSharpExpression
   {
-    private delegate object RunExpressionDelegate();
+    private delegate object RunExpressionDelegate(int exprNo);
 
     private enum State
     {
       NotCompiled = 0,
-      Compiled = 1,
-      Prepared = 2
+      CodeGenerated = 1,
+      Compiled = 2,
+      Prepared = 3
     }
 
     #region Private Fields
     private State state;
-    private string expression;
+    private uint expressionCount;
+    private List<string> expressions;
     private CSharpCodeProvider codeProvider;
     private CompilerParameters compilerParameters;
     private Dictionary<string, object> objectsInScope;
     private List<string> usesNamespaces;
 
-    // These fields will be != null when there's a valid compiled and prepared expression
+    // These fields will be != null when there's a valid compiled and prepared expressions
     private RunExpressionDelegate runExpressionDelegate;
     private CompilerResults prg;
     private object holderObject;
-    #endregion
+    private string programText;
 
+    #endregion
+    
     #region Constructors
-    public CSharpExpression(string Expression)
+    public CSharpExpression(string Expression = "")
     {
       Init(Expression);
     }
@@ -80,23 +84,44 @@ namespace Sovos.CSharpCodeEvaluator
       objectsInScope = new Dictionary<string, object>();
       usesNamespaces = new List<string> { "System" };
       state = State.NotCompiled;
-      expression = Expression;
+      expressions = new List<string>();
+      if(Expression != "")
+        AddExpression(Expression);
+    }
+
+    private void Invalidate()
+    {
+      holderObject = null;
+      prg = null;
+      runExpressionDelegate = null;
+      programText = "";
+      state = State.NotCompiled;
     }
 
     private void InvalidateIfCompiled()
     {
       if (state == State.NotCompiled) return;
-      holderObject = null;
-      prg = null;
-      runExpressionDelegate = null;
-      state = State.NotCompiled;
+      Invalidate();
     }
     #endregion
 
-    #region Public Methods
+    #region Public Methods and properties
+    public uint AddExpression(string Expression)
+    {
+      return AddCodeSnippet("return " + Expression);
+    }
+
+    public uint AddCodeSnippet(string Expression)
+    {
+      InvalidateIfCompiled();
+      expressions.Add(Expression);
+      return expressionCount++;
+    }
+
     public void AddReferencedAssembly(string assemblyName)
     {
       InvalidateIfCompiled();
+      assemblyName = assemblyName.ToUpper();
       if (!compilerParameters.ReferencedAssemblies.Contains(assemblyName))
         compilerParameters.ReferencedAssemblies.Add(assemblyName);
     }
@@ -107,7 +132,7 @@ namespace Sovos.CSharpCodeEvaluator
       if (objectsInScope.ContainsKey(name))
         throw new ECSharpExpression($"Object in scope named '{name}' already exists");
       objectsInScope.Add(name, obj);
-      var assemblyLocation = Path.GetFileName(obj.GetType().Assembly.Location).ToUpper();
+      var assemblyLocation = Path.GetFileName(obj.GetType().Assembly.Location);
       AddReferencedAssembly(assemblyLocation);
       if (obj is ExpandoObject)
         AddReferencedAssembly("MICROSOFT.CSHARP.DLL");
@@ -129,18 +154,18 @@ namespace Sovos.CSharpCodeEvaluator
         usesNamespaces.Add(_namespace);
     }
 
-    public void Compile()
+    public void GenerateCode()
     {
-      if (state != State.NotCompiled) return;
+      if (state >= State.CodeGenerated) return;
       var sb = new StringBuilder("");
       foreach (var _namespace in usesNamespaces)
       {
         sb.Append("using ");
         sb.Append(_namespace);
-        sb.Append(";\n");
+        sb.Append(";");
       }
-      sb.Append("namespace Sovos.CodeEvaler { \n");
-      sb.Append("  public class CodeEvaler { \n");
+      sb.Append("namespace Sovos.CodeEvaler{");
+      sb.Append("public class CodeEvaler{");
       foreach (var objInScope in objectsInScope)
       {
         sb.Append("public ");
@@ -149,58 +174,68 @@ namespace Sovos.CSharpCodeEvaluator
         sb.Append(objInScope.Key);
         sb.Append(";");
       }
-      sb.Append("    public object Eval() { \n");
-      sb.Append("    return ");
-      sb.Append(expression);
-      sb.Append("; \n");
-      sb.Append("    } \n");
-      sb.Append("  } \n");
-      sb.Append("} \n");
+      sb.Append("public object Eval(int exprNo){");
+      sb.Append("switch(exprNo){");
+      var i = 0;
+      foreach (var expr in expressions)
+      {
+        sb.Append("case ");
+        sb.Append(i++);
+        sb.Append(": ");
+        sb.Append(expr);
+        sb.Append(";");
+      }
+      sb.Append("default: throw new Exception(\"Invalid exprNo parameter\");};}}}");
+      programText = sb.ToString();
+      state = State.CodeGenerated;
+    }
 
-      prg = codeProvider.CompileAssemblyFromSource(compilerParameters, sb.ToString());
+    public void Compile()
+    {
+      if (state >= State.Compiled) return;
+      GenerateCode();
+      prg = codeProvider.CompileAssemblyFromSource(compilerParameters, ProgramText);
       if (prg.Errors.Count > 0)
         throw new InvalidExpressionException(prg.Errors[0].ErrorText);
-
       state = State.Compiled;
     }
 
     public void Prepare()
     {
-      switch (state)
-      {
-        case State.Prepared:
-          return;
-        case State.NotCompiled:
-          Compile();
-          break;
-      }
-
+      if (state == State.Prepared) return;
+      Compile();
       var a = prg.CompiledAssembly;
       holderObject = a.CreateInstance("Sovos.CodeEvaler.CodeEvaler");
       if (holderObject == null)
         throw new NullReferenceException("Host object in null");
-
       foreach (var obj in objectsInScope)
         holderObject.GetType().GetField(obj.Key).SetValue(holderObject, obj.Value);
-
       var t = holderObject.GetType();
       var methodInfo = t.GetMethod("Eval");
       if (methodInfo == null)
         throw new NullReferenceException("methodInfo is null");
       runExpressionDelegate = (RunExpressionDelegate) methodInfo.CreateDelegate(typeof (RunExpressionDelegate), holderObject);
-
       state = State.Prepared;
     }
 
     public void Unprepare()
     {
-      InvalidateIfCompiled();
+      Invalidate();
     }
-
-    public object Execute()
+    
+    public object Execute(int exprNo = 0)
     {
       Prepare();
-      return runExpressionDelegate();
+      return runExpressionDelegate(exprNo);
+    }
+
+    public string ProgramText
+    {
+      get
+      {
+        GenerateCode();
+        return programText;
+      }
     }
     #endregion
   }

@@ -22,6 +22,14 @@ namespace csharp_code_evaluator_ut
     }
 
     [Test]
+    public void CodeSnippet_Success()
+    {
+      var expression = new CSharpExpression();
+      Assert.AreEqual(0, expression.AddCodeSnippet("var i = 1; return 1 + i"));
+      Assert.AreEqual(2, expression.Execute());
+    }
+
+    [Test]
     public void TwoBasicExpressions_Success()
     {
       var expression1 = new CSharpExpression("1 + 1");
@@ -208,6 +216,45 @@ namespace csharp_code_evaluator_ut
           Assert.AreEqual(2, expression.Execute());
         }
       }
+    }
+
+    [Test]
+    public void StoreExpressionInDictionary_Success()
+    {
+      var Dict = new Dictionary<string, CSharpExpression>();
+      var expr1 = new CSharpExpression("1 + 1");
+      Dict.Add(expr1.ProgramText, expr1);
+      CSharpExpression expr2;
+      Assert.True(Dict.TryGetValue(expr1.ProgramText, out expr2));
+      Assert.AreEqual(2, expr2.Execute());
+    }
+
+    [Test]
+    public void TwoBasicExpressionsInOneObject_Success()
+    {
+      var expression = new CSharpExpression();
+      Assert.AreEqual(0, expression.AddExpression("1 + 1"));
+      Assert.AreEqual(1, expression.AddExpression("2 + 2"));
+      Assert.AreEqual(2, expression.Execute());
+      Assert.AreEqual(4, expression.Execute(1));
+    }
+
+    [Test]
+    [ExpectedException("System.Exception")]
+    public void RunNonExistingExpressionNumber_Fails()
+    {
+      var expression = new CSharpExpression();
+      expression.Execute(2);
+    }
+
+    [Test]
+    public void OneThousendExpressionsInOneObject_Success()
+    {
+      var expression = new CSharpExpression();
+      for(var i = 1; i < 1000; i++)
+        Assert.AreEqual(i - 1, expression.AddExpression($"{i} + 1"));
+      for (var i = 1; i < 1000; i++)
+        Assert.AreEqual(i + 1, expression.Execute(i - 1));
     }
   }
 }
