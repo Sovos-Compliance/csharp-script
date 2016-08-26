@@ -21,8 +21,8 @@ later the following can be executed:
 ```C#
 var expression = new CSharpExpression("1 + obj.int_Field");
 var obj = new TestClass {int_Field = 2};
-expression.addObjectInScope("obj", obj);
-Assert.AreEqual(3, expression.execute());
+expression.AddObjectInScope("obj", obj);
+Assert.AreEqual(3, expression.Execute());
 ```
 CSharpExpression also support working with "dynamic" types via ExpandoObject.
 
@@ -32,8 +32,8 @@ the following also works:
 var expression = new CSharpExpression("1 + obj.int_Field");
 IDictionary<string, object> obj = new ExpandoObject();
 obj.Add("int_Field", 2);
-expression.addObjectInScope("obj", obj);
-Assert.AreEqual(3, expression.execute());
+expression.AddObjectInScope("obj", obj);
+Assert.AreEqual(3, expression.Execute());
 ```
 
   
