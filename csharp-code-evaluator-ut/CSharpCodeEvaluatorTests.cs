@@ -20,6 +20,14 @@ namespace csharp_code_evaluator_ut
     }
 
     [Test]
+    public void TwoBasicExpressions_Success()
+    {
+      var expression1 = new CSharpExpression("1 + 1");
+      var expression2 = new CSharpExpression("2 + 2");
+      Assert.AreEqual(6, (int)expression1.Execute() + (int)expression2.Execute());
+    }
+
+    [Test]
     public void ExpressionWithOneParameter_Success()
     {
       var expression = new CSharpExpression("1 + a");
