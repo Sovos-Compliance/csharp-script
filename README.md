@@ -1,11 +1,13 @@
 # csharp-code-evaluator
 Dynamically evaluate C# code
 
-This repo provides class CSharpExpression that allows the developer to run a C# expression dynamically with full access to a set of provided objects.
+This repo provides class CSharpExpression that allows the developer to run a C# expression(s) dynamically with full access to a set of externally provided objects.
 
-The usage is very simple. Just create a CSharpExpression object, add "outside" objects in its scope, and they become accesible to the expression.
+The usage is very simple. Just create a CSharpExpression object, add "outside" objects in its scope, and they become accesible to the expression(s) within.
 
-Example:
+All expressions contained within CSharpExpression share a "global" dynamic instance object where state can be kept between executions and effectively share data between expressions.
+
+Examples:
 
 The container program declares a class:
 
