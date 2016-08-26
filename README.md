@@ -55,10 +55,21 @@ for (var i = 1; i < 1000; i++)
   Assert.AreEqual(i + 1, expression.Execute(i - 1));
 ```
 
-finally, you can run expressions that don't return a value:
+you can run expressions that don't return a value:
 
 ```C#
 var expression = new CSharpExpression();
 Assert.AreEqual(0, expression.AddVoidReturnCodeSnippet("var i = 1; Console.WriteLine(i)"));
 Assert.AreEqual(null, expression.Execute());
+```
+
+and finally, to mesmerize our JavaScript loving friends, you can keep global state between executions by doing this:
+
+```C#
+var expression = new CSharpExpression();
+Assert.AreEqual(0, expression.AddVoidReturnCodeSnippet("global.a = 0")); // this injects an int field into global
+Assert.AreEqual(1, expression.AddExpression("global.a++"));
+Assert.AreEqual(null, expression.Execute()); // setup the global
+Assert.AreEqual(0, expression.Execute(1));
+Assert.AreEqual(1, expression.Execute(1));
 ```

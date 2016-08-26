@@ -80,9 +80,11 @@ namespace Sovos.CSharpCodeEvaluator
         CompilerOptions = "/t:library",
         GenerateInMemory = true
       };
-      compilerParameters.ReferencedAssemblies.Add("SYSTEM.DLL");
+      AddReferencedAssembly("SYSTEM.DLL");
+      AddReferencedAssembly("SYSTEM.CORE.DLL");
+      AddReferencedAssembly("MICROSOFT.CSHARP.DLL");
       objectsInScope = new Dictionary<string, object>();
-      usesNamespaces = new List<string> { "System" };
+      usesNamespaces = new List<string> { "System", "System.Dynamic" };
       state = State.NotCompiled;
       expressions = new List<string>();
       if(Expression != "")
@@ -140,8 +142,6 @@ namespace Sovos.CSharpCodeEvaluator
       objectsInScope.Add(name, obj);
       var assemblyLocation = Path.GetFileName(obj.GetType().Assembly.Location);
       AddReferencedAssembly(assemblyLocation);
-      if (obj is ExpandoObject)
-        AddReferencedAssembly("MICROSOFT.CSHARP.DLL");
       AddUsedNamespace(obj.GetType().Namespace);
     }
 
@@ -172,6 +172,9 @@ namespace Sovos.CSharpCodeEvaluator
       }
       sb.Append("namespace Sovos.CodeEvaler{");
       sb.Append("public class CodeEvaler{");
+      sb.Append("private dynamic global;");
+      sb.Append("public CodeEvaler(){");
+      sb.Append("global=new ExpandoObject();}");
       foreach (var objInScope in objectsInScope)
       {
         sb.Append("public ");

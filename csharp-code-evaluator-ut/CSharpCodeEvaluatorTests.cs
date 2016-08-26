@@ -264,5 +264,29 @@ namespace csharp_code_evaluator_ut
       for (var i = 1; i < 1000; i++)
         Assert.AreEqual(i + 1, expression.Execute(i - 1));
     }
+
+    [Test]
+    public void ExpressionUsingGlobalToKeepStateAcrossExecutions_Success()
+    {
+      var expression = new CSharpExpression();
+      Assert.AreEqual(0, expression.AddVoidReturnCodeSnippet("global.a = 0"));
+      Assert.AreEqual(1, expression.AddExpression("global.a++"));
+      Assert.AreEqual(null, expression.Execute()); // setup the global, runs first expression
+      Assert.AreEqual(0, expression.Execute(1));
+      Assert.AreEqual(1, expression.Execute(1));
+    }
+
+    [Test]
+    public void ExpressionUsingGlobalPerformance_Success()
+    {
+      var expression = new CSharpExpression();
+      Assert.AreEqual(0, expression.AddVoidReturnCodeSnippet("global.a = 0"));
+      Assert.AreEqual(1, expression.AddExpression("global.a++"));
+      Assert.AreEqual(null, expression.Execute()); // setup the global
+      var initialTicks = Environment.TickCount;
+      for (var i = 0; i < 1000000; i++) 
+        Assert.AreEqual(i, expression.Execute(1));
+      Assert.Less(Environment.TickCount - initialTicks, 2000); // 1 million executions in less than 2 seconds
+    }
   }
 }
