@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Dynamic;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using Microsoft.CSharp;
 
@@ -14,21 +15,18 @@ namespace Sovos.CSharpCodeEvaluator
   {
     public ECSharpExpression(string msg) : base(msg) {}
   }
-
-  public class ObjectInScope
-  {
-    public string name { get; }
-    public object obj { get; }
-    public ObjectInScope(string name, object obj)
-    {
-      this.name = name;
-      this.obj = obj;
-    }
-  }
-
+  
   public class CSharpExpression
   {
+    #region Private CSharpExpression type
+    private class ObjectFieldInfoPair
+    {
+      public object Object { get; set; }
+      public FieldInfo fieldInfo { get; set; }
+    }
+
     private delegate object RunExpressionDelegate(uint exprNo);
+    #endregion
 
     private enum State
     {
@@ -41,12 +39,12 @@ namespace Sovos.CSharpCodeEvaluator
     #region Private Fields
     private State state;
     private uint expressionCount;
-    private List<string> expressions;
-    private List<string> functions; 
-    private CSharpCodeProvider codeProvider;
-    private CompilerParameters compilerParameters;
-    private Dictionary<string, object> objectsInScope;
-    private List<string> usesNamespaces;
+    private readonly List<string> expressions;
+    private readonly List<string> functions; 
+    private readonly CSharpCodeProvider codeProvider;
+    private readonly CompilerParameters compilerParameters;
+    private readonly Dictionary<string, ObjectFieldInfoPair> objectsInScope;
+    private readonly List<string> usesNamespaces;
 
     // These fields will be != null when there's a valid compiled and prepared expressions
     private RunExpressionDelegate runExpressionDelegate;
@@ -58,20 +56,6 @@ namespace Sovos.CSharpCodeEvaluator
     #region Constructors
     public CSharpExpression(string Expression = "")
     {
-      Init(Expression);
-    }
-
-    public CSharpExpression(string Expression, IEnumerable<ObjectInScope> objectsInScope)
-    {
-      Init(Expression);
-      foreach (var obj in objectsInScope)
-        AddObjectInScope(obj.name, obj.obj);
-    }
-    #endregion
-
-    #region Private Methods
-    private void Init(string Expression)
-    {
       codeProvider = new CSharpCodeProvider();
       compilerParameters = new CompilerParameters
       {
@@ -81,7 +65,7 @@ namespace Sovos.CSharpCodeEvaluator
       AddReferencedAssembly("SYSTEM.DLL");
       AddReferencedAssembly("SYSTEM.CORE.DLL");
       AddReferencedAssembly("MICROSOFT.CSHARP.DLL");
-      objectsInScope = new Dictionary<string, object>();
+      objectsInScope = new Dictionary<string, ObjectFieldInfoPair>();
       usesNamespaces = new List<string> { "System", "System.Dynamic" };
       state = State.NotCompiled;
       expressions = new List<string>();
@@ -89,13 +73,17 @@ namespace Sovos.CSharpCodeEvaluator
       if (Expression != "")
         AddExpression(Expression);
     }
+    #endregion
 
+    #region Private Methods
     private void Invalidate()
     {
       holderObject = null;
       prg = null;
       runExpressionDelegate = null;
       programText = "";
+      foreach (var obj in objectsInScope)
+        obj.Value.fieldInfo = null;
       state = State.NotCompiled;
     }
 
@@ -114,8 +102,7 @@ namespace Sovos.CSharpCodeEvaluator
 
     public uint AddVoidReturnCodeSnippet(string Expression)
     {
-      expressions.Add(Expression + ";return null");
-      return expressionCount++;
+      return AddCodeSnippet(Expression + ";return null");
     }
 
     public uint AddCodeSnippet(string Expression)
@@ -144,9 +131,8 @@ namespace Sovos.CSharpCodeEvaluator
       InvalidateIfCompiled();
       if (objectsInScope.ContainsKey(name))
         throw new ECSharpExpression($"Object in scope named '{name}' already exists");
-      objectsInScope.Add(name, obj);
-      var assemblyLocation = Path.GetFileName(obj.GetType().Assembly.Location);
-      AddReferencedAssembly(assemblyLocation);
+      objectsInScope.Add(name, new ObjectFieldInfoPair{Object = obj, fieldInfo = null});
+      AddReferencedAssembly(Path.GetFileName(obj.GetType().Assembly.Location));
       AddUsedNamespace(obj.GetType().Namespace);
     }
 
@@ -154,8 +140,10 @@ namespace Sovos.CSharpCodeEvaluator
     {
       if (!objectsInScope.ContainsKey(name))
         throw new ECSharpExpression($"Object in scope named '{name}' not found");
-      objectsInScope[name] = obj;
-      holderObject?.GetType().GetField(name).SetValue(holderObject, obj);
+      var objFldInfo = objectsInScope[name];
+      objFldInfo.Object = obj;
+      if(holderObject != null)
+        objFldInfo.fieldInfo.SetValue(holderObject, obj);
     }
 
     public void AddUsedNamespace(string _namespace)
@@ -185,7 +173,7 @@ namespace Sovos.CSharpCodeEvaluator
       foreach (var objInScope in objectsInScope)
       {
         sb.Append("public ");
-        sb.Append(objInScope.Value is ExpandoObject ? "dynamic" : objInScope.Value.GetType().Name);
+        sb.Append(objInScope.Value.Object is ExpandoObject ? "dynamic" : objInScope.Value.Object.GetType().Name);
         sb.Append(" ");
         sb.Append(objInScope.Key);
         sb.Append(";");
@@ -225,7 +213,11 @@ namespace Sovos.CSharpCodeEvaluator
       if (holderObject == null)
         throw new NullReferenceException("Host object in null");
       foreach (var obj in objectsInScope)
-        holderObject.GetType().GetField(obj.Key).SetValue(holderObject, obj.Value);
+      {
+        if (obj.Value.fieldInfo == null)
+          obj.Value.fieldInfo = holderObject.GetType().GetField(obj.Key);
+        obj.Value.fieldInfo.SetValue(holderObject, obj.Value.Object);
+      }
       var t = holderObject.GetType();
       var methodInfo = t.GetMethod("Eval");
       if (methodInfo == null)
