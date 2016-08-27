@@ -73,7 +73,7 @@ namespace csharp_code_evaluator_ut
     }
 
     [Test]
-    [ExpectedException("Sovos.CSharpCodeEvaluator.ECSharpExpression")]
+    [ExpectedException("Sovos.CSharpCodeEvaluator.CSharpExpressionException")]
     public void ExpressionWithSameParameterTwice_Fails()
     {
       var expression = new CSharpExpression("1 + a + a");
@@ -104,7 +104,7 @@ namespace csharp_code_evaluator_ut
     }
 
     [Test]
-    [ExpectedException("Sovos.CSharpCodeEvaluator.ECSharpExpression")]
+    [ExpectedException("Sovos.CSharpCodeEvaluator.CSharpExpressionException")]
     public void ReplacedNonExistingLocalObject_Fails()
     {
       var expression = new CSharpExpression("1 + obj.int_Field");

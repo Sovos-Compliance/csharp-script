@@ -10,15 +10,14 @@ using Microsoft.CSharp;
 
 namespace Sovos.CSharpCodeEvaluator
 {
-  // ReSharper disable once InconsistentNaming
-  public class ECSharpExpression : Exception
+  public class CSharpExpressionException : Exception
   {
-    public ECSharpExpression(string msg) : base(msg) {}
+    public CSharpExpressionException(string msg) : base(msg) {}
   }
   
   public class CSharpExpression
   {
-    #region Private CSharpExpression type
+    #region Private CSharpExpression types
     private class ObjectFieldInfoPair
     {
       public object Object { get; set; }
@@ -26,7 +25,6 @@ namespace Sovos.CSharpCodeEvaluator
     }
 
     private delegate object RunExpressionDelegate(uint exprNo);
-    #endregion
 
     private enum State
     {
@@ -35,6 +33,7 @@ namespace Sovos.CSharpCodeEvaluator
       Compiled = 2,
       Prepared = 3
     }
+    #endregion
 
     #region Private Fields
     private State state;
@@ -67,11 +66,11 @@ namespace Sovos.CSharpCodeEvaluator
       AddReferencedAssembly("MICROSOFT.CSHARP.DLL");
       objectsInScope = new Dictionary<string, ObjectFieldInfoPair>();
       usesNamespaces = new List<string> { "System", "System.Dynamic" };
-      state = State.NotCompiled;
       expressions = new List<string>();
       functions = new List<string>();
       if (Expression != "")
         AddExpression(Expression);
+      state = State.NotCompiled;
     }
     #endregion
 
@@ -130,7 +129,7 @@ namespace Sovos.CSharpCodeEvaluator
     {
       InvalidateIfCompiled();
       if (objectsInScope.ContainsKey(name))
-        throw new ECSharpExpression($"Object in scope named '{name}' already exists");
+        throw new CSharpExpressionException($"Object in scope named '{name}' already exists");
       objectsInScope.Add(name, new ObjectFieldInfoPair{Object = obj, fieldInfo = null});
       AddReferencedAssembly(Path.GetFileName(obj.GetType().Assembly.Location));
       AddUsedNamespace(obj.GetType().Namespace);
@@ -139,7 +138,7 @@ namespace Sovos.CSharpCodeEvaluator
     public void ReplaceObjectInScope(string name, object obj)
     {
       if (!objectsInScope.ContainsKey(name))
-        throw new ECSharpExpression($"Object in scope named '{name}' not found");
+        throw new CSharpExpressionException($"Object in scope named '{name}' not found");
       var objFldInfo = objectsInScope[name];
       objFldInfo.Object = obj;
       if(holderObject != null)
@@ -211,7 +210,7 @@ namespace Sovos.CSharpCodeEvaluator
       var a = prg.CompiledAssembly;
       holderObject = a.CreateInstance("Sovos.CodeEvaler.CodeEvaler");
       if (holderObject == null)
-        throw new NullReferenceException("Host object in null");
+        throw new NullReferenceException("Host object is null");
       foreach (var obj in objectsInScope)
       {
         if (obj.Value.fieldInfo == null)
