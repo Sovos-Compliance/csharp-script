@@ -259,9 +259,9 @@ namespace csharp_code_evaluator_ut
     public void OneThousendExpressionsInOneObject_Success()
     {
       var expression = new CSharpExpression();
-      for(var i = 1; i < 1000; i++)
+      for(uint i = 1; i < 1000; i++)
         Assert.AreEqual(i - 1, expression.AddExpression($"{i} + 1"));
-      for (var i = 1; i < 1000; i++)
+      for (uint i = 1; i < 1000; i++)
         Assert.AreEqual(i + 1, expression.Execute(i - 1));
     }
 
@@ -284,9 +284,22 @@ namespace csharp_code_evaluator_ut
       Assert.AreEqual(1, expression.AddExpression("global.a++"));
       Assert.AreEqual(null, expression.Execute()); // setup the global
       var initialTicks = Environment.TickCount;
-      for (var i = 0; i < 1000000; i++) 
+      for (uint i = 0; i < 1000000; i++) 
         Assert.AreEqual(i, expression.Execute(1));
       Assert.Less(Environment.TickCount - initialTicks, 2000); // 1 million executions in less than 2 seconds
+    }
+
+    [Test]
+    public void CallInjectedFunction_Success()
+    {
+      var expression = new CSharpExpression();
+      expression.AddFunctionBody(
+        @"private int AddNumbers(int a, int b)
+          {
+            return a + b; 
+          }");
+      Assert.AreEqual(0, expression.AddExpression("AddNumbers(1, 2)"));
+      Assert.AreEqual(3, expression.Execute());
     }
   }
 }

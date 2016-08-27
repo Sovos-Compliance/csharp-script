@@ -12,9 +12,7 @@ namespace Sovos.CSharpCodeEvaluator
   // ReSharper disable once InconsistentNaming
   public class ECSharpExpression : Exception
   {
-    public ECSharpExpression(string msg)
-    {
-    }
+    public ECSharpExpression(string msg) : base(msg) {}
   }
 
   public class ObjectInScope
@@ -30,7 +28,7 @@ namespace Sovos.CSharpCodeEvaluator
 
   public class CSharpExpression
   {
-    private delegate object RunExpressionDelegate(int exprNo);
+    private delegate object RunExpressionDelegate(uint exprNo);
 
     private enum State
     {
@@ -44,6 +42,7 @@ namespace Sovos.CSharpCodeEvaluator
     private State state;
     private uint expressionCount;
     private List<string> expressions;
+    private List<string> functions; 
     private CSharpCodeProvider codeProvider;
     private CompilerParameters compilerParameters;
     private Dictionary<string, object> objectsInScope;
@@ -76,7 +75,7 @@ namespace Sovos.CSharpCodeEvaluator
       codeProvider = new CSharpCodeProvider();
       compilerParameters = new CompilerParameters
       {
-        CompilerOptions = "/t:library",
+        CompilerOptions = "/t:library /optimize",
         GenerateInMemory = true
       };
       AddReferencedAssembly("SYSTEM.DLL");
@@ -86,7 +85,8 @@ namespace Sovos.CSharpCodeEvaluator
       usesNamespaces = new List<string> { "System", "System.Dynamic" };
       state = State.NotCompiled;
       expressions = new List<string>();
-      if(Expression != "")
+      functions = new List<string>();
+      if (Expression != "")
         AddExpression(Expression);
     }
 
@@ -123,6 +123,12 @@ namespace Sovos.CSharpCodeEvaluator
       InvalidateIfCompiled();
       expressions.Add(Expression);
       return expressionCount++;
+    }
+
+    public void AddFunctionBody(string function)
+    {
+      InvalidateIfCompiled();
+      functions.Add(function);
     }
 
     public void AddReferencedAssembly(string assemblyName)
@@ -172,6 +178,8 @@ namespace Sovos.CSharpCodeEvaluator
       sb.Append("namespace Sovos.CodeEvaler{");
       sb.Append("public class CodeEvaler{");
       sb.Append("private dynamic global;");
+      foreach (var fn in functions)
+        sb.Append(fn);
       sb.Append("public CodeEvaler(){");
       sb.Append("global=new ExpandoObject();}");
       foreach (var objInScope in objectsInScope)
@@ -182,7 +190,7 @@ namespace Sovos.CSharpCodeEvaluator
         sb.Append(objInScope.Key);
         sb.Append(";");
       }
-      sb.Append("public object Eval(int exprNo){");
+      sb.Append("public object Eval(uint exprNo){");
       sb.Append("switch(exprNo){");
       var i = 0;
       foreach (var expr in expressions)
@@ -231,7 +239,7 @@ namespace Sovos.CSharpCodeEvaluator
       Invalidate();
     }
     
-    public object Execute(int exprNo = 0)
+    public object Execute(uint exprNo = 0)
     {
       Prepare();
       return runExpressionDelegate(exprNo);

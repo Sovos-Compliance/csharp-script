@@ -65,7 +65,7 @@ Assert.AreEqual(0, expression.AddVoidReturnCodeSnippet("var i = 1; Console.Write
 Assert.AreEqual(null, expression.Execute());
 ```
 
-and finally, to mesmerize our JavaScript loving friends, you can keep global state between executions by doing this:
+to mesmerize our JavaScript loving friends, you can keep global state between executions by doing this:
 
 ```C#
 var expression = new CSharpExpression();
@@ -74,4 +74,17 @@ Assert.AreEqual(1, expression.AddExpression("global.a++"));
 Assert.AreEqual(null, expression.Execute()); // setup the global
 Assert.AreEqual(0, expression.Execute(1));
 Assert.AreEqual(1, expression.Execute(1));
+```
+
+finally, if you need to register utilitatian functions within your context, you can do this:
+
+```C#
+var expression = new CSharpExpression();
+expression.AddFunctionBody(
+  @"private int AddNumbers(int a, int b)
+    {
+      return a + b; 
+    }");
+Assert.AreEqual(0, expression.AddExpression("AddNumbers(1, 2)"));
+Assert.AreEqual(3, expression.Execute());
 ```
