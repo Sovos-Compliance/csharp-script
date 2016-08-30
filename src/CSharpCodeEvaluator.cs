@@ -3,7 +3,7 @@
 
   In order to run scripts that access shared object from different AppDomain, you need to:
 
-  1. Put all your shared objects in an assembly, and install the assembly in the GAC
+  1. Put all your shared objects in an assembly, and install the assembly in the GAC (Assembly must be signed for this!)
   2. Use [LoaderOptimization(LoaderOptimization.MultiDomainHost] on your root program. If you don't do so, unloading of AppDomain (and therefore of temporary assemblies) will
      simply fail and you will clutter your app with assemblies you are not intending to keep loaded
  */
