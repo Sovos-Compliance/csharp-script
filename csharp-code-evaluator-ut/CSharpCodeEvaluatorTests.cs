@@ -14,8 +14,8 @@ namespace csharp_code_evaluator_ut
 
   public class CSharpCodeEvaluatorTests
   {
+    [LoaderOptimization(LoaderOptimization.MultiDomainHost)]
     [Test]
-    [LoaderOptimization(LoaderOptimization.MultiDomain)]
     public void BasicExpression_Success()
     {
       using (var expression = new CSharpExpression("1 + 1"))
@@ -339,6 +339,27 @@ namespace csharp_code_evaluator_ut
           }");
         Assert.AreEqual(0, expression.AddExpression("AddNumbers(1, 2)"));
         Assert.AreEqual(3, expression.Execute());
+      }
+    }
+
+    [Test]
+    public void BasicExpressionSeparateAppDomain_Success()
+    {
+      using (var expression = new CSharpExpression("1 + 1"))
+      {
+        expression.ExecuteInSeparateAppDomain = true;
+        Assert.AreEqual(2, expression.Execute());
+      }
+    }
+
+    [Test]
+    public void BasicExpressionSeparateAppDomainShareIntegerObject_Success()
+    {
+      using (var expression = new CSharpExpression("1 + a"))
+      {
+        expression.ExecuteInSeparateAppDomain = true;
+        expression.AddObjectInScope("a", 1);
+        Assert.AreEqual(2, expression.Execute());
       }
     }
   }

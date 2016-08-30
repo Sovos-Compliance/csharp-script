@@ -118,10 +118,10 @@ namespace Sovos.CSharpCodeEvaluator
     private void Invalidate()
     {
       holderObjectAccesor = null;
-      TryRemoveTemporaryAssembly();
       prg = null;
       programText = "";
       TryUnloadAppDomain();
+      TryRemoveTemporaryAssembly();
       appDomain = null;
       state = State.NotCompiled;
     }
@@ -283,10 +283,7 @@ namespace Sovos.CSharpCodeEvaluator
         holderObjectAccesor = (ICSharpExpressionAccessor) appDomain.CreateInstanceFromAndUnwrap(prg.PathToAssembly, "Sovos.CodeEvaler.CodeEvaler");
       }
       else
-      {
-        appDomain = null;
         holderObjectAccesor = (ICSharpExpressionAccessor)prg.CompiledAssembly.CreateInstance("Sovos.CodeEvaler.CodeEvaler");
-      }
       if (holderObjectAccesor == null)
         throw new NullReferenceException("Host object is null");
       foreach (var obj in objectsInScope)
