@@ -60,6 +60,9 @@
     <Compile Include="..\src\ObjectAddress.cs">
       <Link>Src\ObjectAddress.cs</Link>
     </Compile>
+    <Compile Include="..\src\SovosExpandoObject.cs">
+      <Link>Src\SovosExpandoObject.cs</Link>
+    </Compile>
     <Compile Include="Test\CSharpCodeEvaluatorTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

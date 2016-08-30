@@ -4,6 +4,7 @@ using System.Dynamic;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Sovos.CSharpCodeEvaluator;
+using Sovos.Infrastructure;
 
 namespace csharp_code_evaluator_ut
 {
@@ -11,69 +12,7 @@ namespace csharp_code_evaluator_ut
   {
     public int int_Field;
   }
-
-  public class CustomExpando : DynamicObject
-  {
-    public IDictionary<string, object> Dictionary { get; set; }
-
-    public CustomExpando()
-    {
-      Dictionary = new Dictionary<string, object>();
-    }
-
-    public int Count { get { return Dictionary.Keys.Count; } }
-
-    public override bool TryGetMember(GetMemberBinder binder, out object result)
-    {
-      if (Dictionary.ContainsKey(binder.Name))
-      {
-        result = binder.Name + "=" + Dictionary[binder.Name];
-        return true;
-      }
-      return base.TryGetMember(binder, out result); //means result = null and return = false
-    }
-
-    public override bool TrySetMember(SetMemberBinder binder, object value)
-    {
-      if (!Dictionary.ContainsKey(binder.Name))
-      {
-        Dictionary.Add(binder.Name, value);
-      }
-      else
-        Dictionary[binder.Name] = value;
-
-      return true;
-    }
-
-    public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
-    {
-      if (Dictionary.ContainsKey(binder.Name) && Dictionary[binder.Name] is Delegate)
-      {
-        Delegate del = (Delegate)Dictionary[binder.Name];
-        result = del.DynamicInvoke(args);
-        return true;
-      }
-      return base.TryInvokeMember(binder, args, out result);
-    }
-
-    public override bool TryDeleteMember(DeleteMemberBinder binder)
-    {
-      if (Dictionary.ContainsKey(binder.Name))
-      {
-        Dictionary.Remove(binder.Name);
-        return true;
-      }
-
-      return base.TryDeleteMember(binder);
-    }
-
-    public override IEnumerable<string> GetDynamicMemberNames()
-    {
-      foreach (string name in Dictionary.Keys)
-        yield return name;
-    }
-  }
-
+  
   public class CSharpCodeEvaluatorTests
   {
     [LoaderOptimization(LoaderOptimization.MultiDomainHost)]
@@ -440,12 +379,31 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void UseCustomExpandoObjectWithProperty_Success()
     {
-      using (var expression = new CSharpExpression("a.Test"))
+      using (var expression = new CSharpExpression())
       {
-        dynamic expando = new CustomExpando();
-        expando.Test = "Hi";
-        expression.AddObjectInScope("a", expando);
-        Assert.AreEqual("Test=Hi", expression.Execute());
+        var expando = new SovosExpando();
+        expando.Dictionary.Add("GetTest", new Func<IDictionary<string, object>, string>(_this =>
+        {
+          if(!_this.ContainsKey("_test"))
+            _this.Add("_test", "");
+          return (string)_this["_test"];
+        }));
+        expando.Dictionary.Add("SetTest", new Action<IDictionary<string, object>, string>((_this, value) =>
+        {
+          _this["_test"] = value;
+        }));
+        expando.Dictionary.Add("ResetTest", new Action<IDictionary<string, object>>(_this =>
+        {
+          _this["_test"] = "";
+        }));
+        expression.AddObjectInScope("sovosExpando", expando);
+        expression.AddCodeSnippet(
+          @"var v = sovosExpando.Test; // We read here a property that gets created on-the-fly
+            sovosExpando.Test = ""Hola Mundo""; // We enter a value here that will be cleared by ResetTest() call
+            sovosExpando.ResetTest(); // We invoke a dynamically created method here
+            sovosExpando.Test = v + sovosExpando.Test + ""Hello World""; // We use here the property read on-the-fly and stored in v
+            return sovosExpando.Test");
+        Assert.AreEqual("Hello World", expression.Execute());
       }
     }
   }
