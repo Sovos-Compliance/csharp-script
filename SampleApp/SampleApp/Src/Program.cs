@@ -9,7 +9,7 @@ namespace SampleApp
     [LoaderOptimization(LoaderOptimization.MultiDomainHost)]
     static void Main(string[] args)
     {
-      CSharpExpression expression = new CSharpExpression("1 + a.a") {ExecuteInSeparateAppDomain = true};
+      var expression = new CSharpExpression("1 + a.a") {ExecuteInSeparateAppDomain = true};
       // This snippet shows how a class on a assembly in the GAC can be used
       using (expression)
       {

@@ -60,7 +60,6 @@ namespace Sovos.CSharpCodeEvaluator
     private string programText;
     private AppDomain appDomain;
     private bool executeInSeparateAppDomain;
-
     #endregion
 
     #region Constructors and Desturctor
@@ -153,7 +152,7 @@ namespace Sovos.CSharpCodeEvaluator
       {
         try
         {
-          holderObjectAccesor?.SetField(fieldName, ObjectAddress.GetAddress(obj));
+          holderObjectAccesor.SetField(fieldName, ObjectAddress.GetAddress(obj));
           break;
         }
         catch (NotSupportedException)
@@ -338,7 +337,6 @@ namespace Sovos.CSharpCodeEvaluator
         compilerParameters.GenerateInMemory = !executeInSeparateAppDomain;
       }
     }
-
     #endregion
   }
 }
