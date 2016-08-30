@@ -406,5 +406,21 @@ namespace csharp_code_evaluator_ut
         Assert.AreEqual("Hello World", expression.Execute());
       }
     }
+
+    [Test]
+    public void ClassSnippet_Success()
+    {
+      using (var expression = new CSharpExpression())
+      {
+        expression.AddClass(
+          @"private class Tester {
+            public static int Test() {
+              return 10;
+            }
+          }");
+        Assert.AreEqual(0, expression.AddCodeSnippet("var i = 1; return Tester.Test() + i"));
+        Assert.AreEqual(11, expression.Execute());
+      }
+    }
   }
 }

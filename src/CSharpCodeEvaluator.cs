@@ -49,7 +49,8 @@ namespace Sovos.CSharpCodeEvaluator
     private State state;
     private uint expressionCount;
     private readonly List<string> expressions;
-    private readonly List<string> functions; 
+    private readonly List<string> functions;
+    private readonly List<string> classes; 
     private readonly CompilerParameters compilerParameters;
     private readonly Dictionary<string, object> objectsInScope;
     private readonly List<string> usesNamespaces;
@@ -78,6 +79,7 @@ namespace Sovos.CSharpCodeEvaluator
       usesNamespaces = new List<string> { "System", "System.Dynamic", "Sovos.Infrastructure", "System.Collections.Generic" };
       expressions = new List<string>();
       functions = new List<string>();
+      classes = new List<string>();
       if (Expression != "")
         AddExpression(Expression);
       state = State.NotCompiled;
@@ -186,6 +188,12 @@ namespace Sovos.CSharpCodeEvaluator
       functions.Add(function);
     }
 
+    public void AddClass(string aClass)
+    {
+      InvalidateIfCompiled();
+      classes.Add(aClass);
+    }
+
     public void AddReferencedAssembly(string assemblyName)
     {
       InvalidateIfCompiled();
@@ -231,6 +239,8 @@ namespace Sovos.CSharpCodeEvaluator
       }
       sb.Append("namespace Sovos.CodeEvaler{");
       sb.Append("public class CodeEvaler:CSharpExpressionBase{");
+      foreach (var aClass in classes)
+        sb.Append(aClass);
       sb.Append("private dynamic global;");
       foreach (var fn in functions)
         sb.Append(fn);
