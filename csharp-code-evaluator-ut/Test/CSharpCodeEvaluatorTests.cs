@@ -12,6 +12,68 @@ namespace csharp_code_evaluator_ut
     public int int_Field;
   }
 
+  public class CustomExpando : DynamicObject
+  {
+    public IDictionary<string, object> Dictionary { get; set; }
+
+    public CustomExpando()
+    {
+      Dictionary = new Dictionary<string, object>();
+    }
+
+    public int Count { get { return Dictionary.Keys.Count; } }
+
+    public override bool TryGetMember(GetMemberBinder binder, out object result)
+    {
+      if (Dictionary.ContainsKey(binder.Name))
+      {
+        result = binder.Name + "=" + Dictionary[binder.Name];
+        return true;
+      }
+      return base.TryGetMember(binder, out result); //means result = null and return = false
+    }
+
+    public override bool TrySetMember(SetMemberBinder binder, object value)
+    {
+      if (!Dictionary.ContainsKey(binder.Name))
+      {
+        Dictionary.Add(binder.Name, value);
+      }
+      else
+        Dictionary[binder.Name] = value;
+
+      return true;
+    }
+
+    public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
+    {
+      if (Dictionary.ContainsKey(binder.Name) && Dictionary[binder.Name] is Delegate)
+      {
+        Delegate del = (Delegate)Dictionary[binder.Name];
+        result = del.DynamicInvoke(args);
+        return true;
+      }
+      return base.TryInvokeMember(binder, args, out result);
+    }
+
+    public override bool TryDeleteMember(DeleteMemberBinder binder)
+    {
+      if (Dictionary.ContainsKey(binder.Name))
+      {
+        Dictionary.Remove(binder.Name);
+        return true;
+      }
+
+      return base.TryDeleteMember(binder);
+    }
+
+    public override IEnumerable<string> GetDynamicMemberNames()
+    {
+      foreach (string name in Dictionary.Keys)
+        yield return name;
+    }
+  }
+
   public class CSharpCodeEvaluatorTests
   {
     [LoaderOptimization(LoaderOptimization.MultiDomainHost)]
@@ -360,6 +422,30 @@ namespace csharp_code_evaluator_ut
         expression.ExecuteInSeparateAppDomain = true;
         expression.AddObjectInScope("a", 1);
         Assert.AreEqual(2, expression.Execute());
+      }
+    }
+
+    [Test]
+    public void UseExpandoObjectWithDynamicMethod_Success()
+    {
+      using (var expression = new CSharpExpression("\"a\" + a.Test(\"a\")"))
+      {
+        dynamic expando = new ExpandoObject();
+        expando.Test = new Func<string, string>(str => "Hello" + str);
+        expression.AddObjectInScope("a", expando);
+        Assert.AreEqual("aHelloa", expression.Execute());
+      }
+    }
+    
+    [Test]
+    public void UseCustomExpandoObjectWithProperty_Success()
+    {
+      using (var expression = new CSharpExpression("a.Test"))
+      {
+        dynamic expando = new CustomExpando();
+        expando.Test = "Hi";
+        expression.AddObjectInScope("a", expando);
+        Assert.AreEqual("Test=Hi", expression.Execute());
       }
     }
   }

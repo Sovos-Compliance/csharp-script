@@ -1,11 +1,19 @@
 /*
   Very important note on the usage of this module: PLEASE READ IF YOU PLAN TO RUN YOUR SCRIPTS IN DIFFERENT AppDomain!!
 
+  First, why using different AppDomains (set property ExecuteInSeparateAppDomain to true)? 
+  You want to do this, if you plan to:
+     Run "scripted" C# code that changes "a lot" during the lifetime of a process. If you don't use different AppDomains 
+     you can't unload assemblies you may not need anymore
+
   In order to run scripts that access shared object from different AppDomain, you need to:
 
   1. Put all your shared objects in an assembly, and install the assembly in the GAC (Assembly must be signed for this!)
-  2. Use [LoaderOptimization(LoaderOptimization.MultiDomainHost] on your root program. If you don't do so, unloading of AppDomain (and therefore of temporary assemblies) will
-     simply fail and you will clutter your app with assemblies you are not intending to keep loaded
+  2. Use [LoaderOptimization(LoaderOptimization.MultiDomainHost] on your root program. If you don't do so, unloading of 
+     AppDomain (and therefore of temporary assemblies) will simply fail and you will clutter your app with assemblies 
+     you are not intending to keep loaded
+  3. If you run your app from the VS debugger, go to Properties in your project, select Debug tab and make sure 
+     "Enable the Visual Studio hosting process" is unchecked
  */
 
 using System;
@@ -232,7 +240,7 @@ namespace Sovos.CSharpCodeEvaluator
       foreach (var objInScope in objectsInScope)
       {
         sb.Append("public ");
-        sb.Append(objInScope.Value is ExpandoObject ? "dynamic" : objInScope.Value.GetType().Name);
+        sb.Append(objInScope.Value is ExpandoObject || objInScope.Value is DynamicObject ? "dynamic" : objInScope.Value.GetType().Name);
         sb.Append(" ");
         sb.Append(objInScope.Key);
         sb.Append(";");
