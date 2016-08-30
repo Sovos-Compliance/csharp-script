@@ -224,7 +224,7 @@ namespace csharp_code_evaluator_ut
     {
       for (var i = 1; i < 50; i++)
       {
-        using (var expression = new CSharpExpression($"{i} + 1"))
+        using (var expression = new CSharpExpression(String.Format("{0} + 1", i)))
           Assert.AreEqual(1 + i, expression.Execute());
       }
     }
@@ -293,7 +293,7 @@ namespace csharp_code_evaluator_ut
       using (var expression = new CSharpExpression())
       {
         for (uint i = 1; i < 1000; i++)
-          Assert.AreEqual(i - 1, expression.AddExpression($"{i} + 1"));
+          Assert.AreEqual(i - 1, expression.AddExpression(String.Format("{0} + 1", i)));
         for (uint i = 1; i < 1000; i++)
           Assert.AreEqual(i + 1, expression.Execute(i - 1));
       }

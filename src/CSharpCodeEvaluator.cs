@@ -191,7 +191,7 @@ namespace Sovos.CSharpCodeEvaluator
     {
       InvalidateIfCompiled();
       if (objectsInScope.ContainsKey(name))
-        throw new CSharpExpressionException($"Object in scope named '{name}' already exists");
+        throw new CSharpExpressionException(String.Format("Object in scope named '{0}' already exists", name));
       objectsInScope.Add(name, obj);
       AddReferencedAssembly(Path.GetFileName(obj.GetType().Assembly.Location));
       AddUsedNamespace(obj.GetType().Namespace);
@@ -200,7 +200,7 @@ namespace Sovos.CSharpCodeEvaluator
     public void ReplaceObjectInScope(string name, object obj)
     {
       if (!objectsInScope.ContainsKey(name))
-        throw new CSharpExpressionException($"Object in scope named '{name}' not found");
+        throw new CSharpExpressionException(String.Format("Object in scope named '{0}' not found", name));
       objectsInScope[name] = obj;
       SetHostOjectField(name, obj);
     }
