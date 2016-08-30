@@ -407,7 +407,6 @@ namespace csharp_code_evaluator_ut
       }
     }
 
-    [Test]
     public void ClassSnippet_Success()
     {
       using (var expression = new CSharpExpression())
