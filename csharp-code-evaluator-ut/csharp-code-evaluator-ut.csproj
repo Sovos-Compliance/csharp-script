@@ -46,16 +46,18 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\src\CSharpCodeEvaluator.cs">
-      <Link>CSharpCodeEvaluator.cs</Link>
+      <Link>Src\CSharpCodeEvaluator.cs</Link>
     </Compile>
-    <Compile Include="..\src\CSharpExpressionBase.cs" />
+    <Compile Include="..\src\CSharpExpressionBase.cs">
+      <Link>Src\CSharpExpressionBase.cs</Link>
+    </Compile>
     <Compile Include="..\src\IntPtrConverter.cs">
-      <Link>IntPtrConverter.cs</Link>
+      <Link>Src\IntPtrConverter.cs</Link>
     </Compile>
     <Compile Include="..\src\ObjectAddress.cs">
-      <Link>ObjectAddress.cs</Link>
+      <Link>Src\ObjectAddress.cs</Link>
     </Compile>
-    <Compile Include="CSharpCodeEvaluatorTests.cs" />
+    <Compile Include="Test\CSharpCodeEvaluatorTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
