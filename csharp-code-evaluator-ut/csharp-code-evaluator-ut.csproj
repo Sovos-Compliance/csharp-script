@@ -20,6 +20,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -46,6 +47,13 @@
   <ItemGroup>
     <Compile Include="..\src\CSharpCodeEvaluator.cs">
       <Link>CSharpCodeEvaluator.cs</Link>
+    </Compile>
+    <Compile Include="..\src\CSharpExpressionBase.cs" />
+    <Compile Include="..\src\IntPtrConverter.cs">
+      <Link>IntPtrConverter.cs</Link>
+    </Compile>
+    <Compile Include="..\src\ObjectAddress.cs">
+      <Link>ObjectAddress.cs</Link>
     </Compile>
     <Compile Include="CSharpCodeEvaluatorTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
