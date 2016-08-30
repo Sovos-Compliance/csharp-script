@@ -4,16 +4,18 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{DA6DD95A-F66E-443B-84F0-A88114F1F450}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <ProjectGuid>{0FB77BFC-2439-4F81-A249-F4D87017E2AD}</ProjectGuid>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>csharp_code_evaluator_ut</RootNamespace>
-    <AssemblyName>csharp-code-evaluator-ut</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <RootNamespace>SampleApp</RootNamespace>
+    <AssemblyName>SampleApp</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -22,22 +24,17 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <UseVSHostingProcess>false</UseVSHostingProcess>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="nunit.framework, Version=2.6.3.13283, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\dependencies\nunit.framework.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -48,28 +45,29 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\src\CSharpCodeEvaluator.cs">
-      <Link>Src\CSharpCodeEvaluator.cs</Link>
+    <Compile Include="..\..\src\CSharpCodeEvaluator.cs">
+      <Link>Refs\CSharpCodeEvaluator.cs</Link>
     </Compile>
-    <Compile Include="..\src\CSharpExpressionBase.cs">
-      <Link>Src\CSharpExpressionBase.cs</Link>
+    <Compile Include="..\..\src\CSharpExpressionBase.cs">
+      <Link>Refs\CSharpExpressionBase.cs</Link>
     </Compile>
-    <Compile Include="..\src\IntPtrConverter.cs">
-      <Link>Src\IntPtrConverter.cs</Link>
+    <Compile Include="..\..\src\IntPtrConverter.cs">
+      <Link>Refs\IntPtrConverter.cs</Link>
     </Compile>
-    <Compile Include="..\src\ObjectAddress.cs">
-      <Link>Src\ObjectAddress.cs</Link>
+    <Compile Include="..\..\src\ObjectAddress.cs">
+      <Link>Refs\ObjectAddress.cs</Link>
     </Compile>
-    <Compile Include="Test\CSharpCodeEvaluatorTests.cs" />
+    <Compile Include="Src\Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\LICENSE">
-      <Link>LICENSE</Link>
-    </None>
-    <None Include="..\README.md">
-      <Link>README.md</Link>
-    </None>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\csharp-code-evaluator-ut\CSharpCodeEvaluatorTestClass\CSharpCodeEvaluatorTestClass.csproj">
+      <Project>{42a84748-be8e-40bb-be23-d14548a6d045}</Project>
+      <Name>CSharpCodeEvaluatorTestClass</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
