@@ -4,7 +4,7 @@ using System.Dynamic;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Sovos.CSharpCodeEvaluator;
-using Sovos.Infrastructure;
+using SampleApp;
 
 namespace csharp_code_evaluator_ut
 {
@@ -333,7 +333,7 @@ namespace csharp_code_evaluator_ut
     {
       using (var expression = new CSharpExpression())
       {
-        expression.AddFunctionBody(
+        expression.AddMember(
           @"private int AddNumbers(int a, int b)
           {
             return a + b; 
@@ -381,21 +381,7 @@ namespace csharp_code_evaluator_ut
     {
       using (var expression = new CSharpExpression())
       {
-        var expando = new SovosExpando();
-        expando.Dictionary.Add("GetTest", new Func<IDictionary<string, object>, string>(_this =>
-        {
-          if(!_this.ContainsKey("_test"))
-            _this.Add("_test", "");
-          return (string)_this["_test"];
-        }));
-        expando.Dictionary.Add("SetTest", new Action<IDictionary<string, object>, string>((_this, value) =>
-        {
-          _this["_test"] = value;
-        }));
-        expando.Dictionary.Add("ResetTest", new Action<IDictionary<string, object>>(_this =>
-        {
-          _this["_test"] = "";
-        }));
+        var expando = SovosExpandoBuilder.Build();
         expression.AddObjectInScope("sovosExpando", expando);
         expression.AddCodeSnippet(
           @"var v = sovosExpando.Test; // We read here a property that gets created on-the-fly
@@ -411,7 +397,7 @@ namespace csharp_code_evaluator_ut
     {
       using (var expression = new CSharpExpression())
       {
-        expression.AddClass(
+        expression.AddMember(
           @"private class Tester {
             public static int Test() {
               return 10;

@@ -13,14 +13,20 @@ namespace Sovos.Infrastructure
       Dictionary = new Dictionary<string, object>();
     }
 
-    public int Count { get { return Dictionary.Keys.Count; } }
+    public int Count
+    {
+      get
+      {
+        return Dictionary.Keys.Count;
+      }
+    }
 
     public override bool TryGetMember(GetMemberBinder binder, out object result)
     {
       if (Dictionary.ContainsKey("Get" + binder.Name))
       {
         var del = (Delegate)Dictionary["Get" + binder.Name];
-        result = del.DynamicInvoke(Dictionary);
+        result = del.DynamicInvoke(this);
         return true;
       }
       if (!Dictionary.ContainsKey(binder.Name))
@@ -34,7 +40,7 @@ namespace Sovos.Infrastructure
       if (Dictionary.ContainsKey("Set" + binder.Name))
       {
         var del = (Delegate)Dictionary["Set" + binder.Name];
-        del.DynamicInvoke(Dictionary, value);
+        del.DynamicInvoke(this, value);
         return true;
       }
       if (!Dictionary.ContainsKey(binder.Name))
@@ -53,7 +59,7 @@ namespace Sovos.Infrastructure
         return base.TryInvokeMember(binder, args, out result);
       var del = (Delegate)Dictionary[binder.Name];
       var argsWithThis = new object[args.Length + 1];
-      argsWithThis[0] = Dictionary;
+      argsWithThis[0] = this;
       var i = 1;
       foreach (var arg in args)
         argsWithThis[i++] = arg;

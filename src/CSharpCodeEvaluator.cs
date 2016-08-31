@@ -49,8 +49,7 @@ namespace Sovos.CSharpCodeEvaluator
     private State state;
     private uint expressionCount;
     private readonly List<string> expressions;
-    private readonly List<string> functions;
-    private readonly List<string> classes; 
+    private readonly List<string> members;
     private readonly CompilerParameters compilerParameters;
     private readonly Dictionary<string, object> objectsInScope;
     private readonly List<string> usesNamespaces;
@@ -78,8 +77,7 @@ namespace Sovos.CSharpCodeEvaluator
       objectsInScope = new Dictionary<string, object>();
       usesNamespaces = new List<string> { "System", "System.Dynamic", "Sovos.Infrastructure", "System.Collections.Generic" };
       expressions = new List<string>();
-      functions = new List<string>();
-      classes = new List<string>();
+      members = new List<string>();
       if (Expression != "")
         AddExpression(Expression);
       state = State.NotCompiled;
@@ -154,7 +152,10 @@ namespace Sovos.CSharpCodeEvaluator
       {
         try
         {
-          holderObjectAccesor.SetField(fieldName, ObjectAddress.GetAddress(obj));
+          if(!executeInSeparateAppDomain)
+            holderObjectAccesor.SetField(fieldName, obj);
+          else
+            holderObjectAccesor.SetField(fieldName, ObjectAddress.GetAddress(obj));
           break;
         }
         catch (NotSupportedException)
@@ -182,16 +183,10 @@ namespace Sovos.CSharpCodeEvaluator
       return AddCode(Expression + ";break");
     }
     
-    public void AddFunctionBody(string function)
+    public void AddMember(string body)
     {
       InvalidateIfCompiled();
-      functions.Add(function);
-    }
-
-    public void AddClass(string aClass)
-    {
-      InvalidateIfCompiled();
-      classes.Add(aClass);
+      members.Add(body);
     }
 
     public void AddReferencedAssembly(string assemblyName)
@@ -239,11 +234,9 @@ namespace Sovos.CSharpCodeEvaluator
       }
       sb.Append("namespace Sovos.CodeEvaler{");
       sb.Append("public class CodeEvaler:CSharpExpressionBase{");
-      foreach (var aClass in classes)
-        sb.Append(aClass);
       sb.Append("private dynamic global;");
-      foreach (var fn in functions)
-        sb.Append(fn);
+      foreach (var body in members)
+        sb.Append(body);
       sb.Append("public CodeEvaler(){");
       sb.Append("global=new ExpandoObject();}");
       foreach (var objInScope in objectsInScope)

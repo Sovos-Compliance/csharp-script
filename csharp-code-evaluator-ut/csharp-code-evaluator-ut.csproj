@@ -48,6 +48,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\SampleApp\SampleApp\Src\SovosExpandoBuilder.cs">
+      <Link>Src\SovosExpandoBuilder.cs</Link>
+    </Compile>
     <Compile Include="..\src\CSharpCodeEvaluator.cs">
       <Link>Src\CSharpCodeEvaluator.cs</Link>
     </Compile>

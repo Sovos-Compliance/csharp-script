@@ -6,6 +6,7 @@ namespace Sovos.Infrastructure
   public interface ICSharpExpressionAccessor
   {
     void SetField(string fieldName, KeyValuePair<IntPtr, int> obj);
+    void SetField(string fieldName, object obj);
     object Eval(uint ExprNo);
   }
 
@@ -17,6 +18,11 @@ namespace Sovos.Infrastructure
       if (ObjectAddress.GCCount != obj.Value)
         throw new NotSupportedException("GCCount changed since IntPtr of object was obtained. Please try again");
       GetType().GetField(fieldName).SetValue(this, converter.ConvertFromIntPtr(obj.Key));
+    }
+
+    public void SetField(string fieldName, object obj)
+    {
+      GetType().GetField(fieldName).SetValue(this, obj);
     }
 
     public abstract object Eval(uint ExprNo);

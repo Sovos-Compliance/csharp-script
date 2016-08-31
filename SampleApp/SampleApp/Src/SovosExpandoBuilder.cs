@@ -1,28 +1,26 @@
 using System;
-using System.Collections.Generic;
 using Sovos.Infrastructure;
 
 namespace SampleApp
 {
   public class SovosExpandoBuilder
   {
-
     public static SovosExpando Build()
     {
       var expando = new SovosExpando();
-      expando.Dictionary.Add("GetTest", new Func<IDictionary<string, object>, string>(_this =>
+      expando.Dictionary.Add("GetTest", new Func<SovosExpando, string>(_this =>
       {
-        if (!_this.ContainsKey("_test"))
-          _this.Add("_test", "");
-        return (string) _this["_test"];
+        if (!_this.Dictionary.ContainsKey("_test"))
+          _this.Dictionary.Add("_test", "");
+        return (string) _this.Dictionary["_test"];
       }));
-      expando.Dictionary.Add("SetTest", new Action<IDictionary<string, object>, string>((_this, value) =>
+      expando.Dictionary.Add("SetTest", new Action<SovosExpando, string>((_this, value) =>
       {
-        _this["_test"] = value;
+        _this.Dictionary["_test"] = value;
       }));
-      expando.Dictionary.Add("ResetTest", new Action<IDictionary<string, object>>(_this =>
+      expando.Dictionary.Add("ResetTest", new Action<SovosExpando>(_this =>
       {
-        _this["_test"] = "";
+        _this.Dictionary["_test"] = "";
       }));
       return expando;
     }
