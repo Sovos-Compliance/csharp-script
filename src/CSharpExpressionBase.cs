@@ -8,6 +8,7 @@ namespace Sovos.Infrastructure
     void SetField(string fieldName, KeyValuePair<IntPtr, int> obj);
     void SetField(string fieldName, object obj);
     object Eval(uint ExprNo);
+    object Invoke(string methodName, object[] args);
   }
 
   public abstract class CSharpExpressionBase : MarshalByRefObject, ICSharpExpressionAccessor
@@ -26,5 +27,13 @@ namespace Sovos.Infrastructure
     }
 
     public abstract object Eval(uint ExprNo);
+
+    public object Invoke(string methodName, object[] args)
+    {
+      var method = GetType().GetMethod(methodName);
+      if (method != null)
+        return method.Invoke(this, args);
+      throw new MissingMethodException(string.Format("Method \"{0}\"not found", methodName));
+    }
   }
 }

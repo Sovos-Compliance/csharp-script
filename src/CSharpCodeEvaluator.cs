@@ -110,25 +110,37 @@ namespace Sovos.CSharpCodeEvaluator
 
     private void TryRemoveTemporaryAssembly()
     {
-      if (prg == null || !File.Exists(prg.PathToAssembly)) return;
+      if (prg != null && File.Exists(prg.PathToAssembly))
+        try
+        {
+          File.Delete(prg.PathToAssembly);
+        }
+        catch (Exception)
+        {
+          // ignore any exception trying to remove assembly. 
+          // very likely the assembly is loaded in memory
+        }
       try
       {
-        File.Delete(prg.PathToAssembly);
+        var tmpFiles = Directory.EnumerateFiles(TempLocation);
+        foreach (var file in tmpFiles)
+          File.Delete(file);
+        Directory.Delete(TempLocation);
       }
       catch (Exception)
       {
-        // ignore any exception trying to remove assembly. 
-        // very likely the assembly is loaded in memory
+        // ignore any exception trying to remove temp directory or its files 
+        // very likely there's still files being used
       }
     }
 
     private void Invalidate()
     {
       holderObjectAccesor = null;
-      prg = null;
       programText = "";
       TryUnloadAppDomain();
       TryRemoveTemporaryAssembly();
+      prg = null;
       appDomain = null;
       state = State.NotCompiled;
     }
@@ -163,6 +175,17 @@ namespace Sovos.CSharpCodeEvaluator
           // capture the exception and try again. This happens because there was a GC call between
           // the time we obtained the raw address of obj and the call to SetField()
         }
+      }
+    }
+
+    private string tempLocation;
+    private string TempLocation
+    {
+      get
+      {
+        if (string.IsNullOrEmpty(tempLocation))
+          tempLocation = string.Format("{0}\\sovos_csharpexpression_{1}\\", Path.GetTempPath(), GetHashCode());
+        return tempLocation;
       }
     }
     #endregion
@@ -230,25 +253,28 @@ namespace Sovos.CSharpCodeEvaluator
       {
         sb.Append("using ");
         sb.Append(_namespace);
-        sb.Append(";");
+        sb.Append(";\r\n");
       }
-      sb.Append("namespace Sovos.CodeEvaler{");
-      sb.Append("public class CodeEvaler:CSharpExpressionBase{");
-      sb.Append("private dynamic global;");
+      sb.Append("namespace Sovos.CodeEvaler {\r\n");
+      sb.Append("public class CodeEvaler : CSharpExpressionBase {\r\n");
+      sb.Append("private dynamic global;\r\n");
       foreach (var body in members)
+      {
         sb.Append(body);
-      sb.Append("public CodeEvaler(){");
-      sb.Append("global=new ExpandoObject();}");
+        sb.Append("\r\n");
+      }
+      sb.Append("public CodeEvaler() {\r\n");
+      sb.Append("global=new ExpandoObject();\r\n}\r\n");
       foreach (var objInScope in objectsInScope)
       {
         sb.Append("public ");
-        sb.Append(objInScope.Value is ExpandoObject || objInScope.Value is DynamicObject ? "dynamic" : objInScope.Value.GetType().Name);
+        sb.Append(objInScope.Value is IDynamicMetaObjectProvider ? "dynamic" : objInScope.Value.GetType().Name);
         sb.Append(" ");
         sb.Append(objInScope.Key);
-        sb.Append(";");
+        sb.Append(";\r\n");
       }
-      sb.Append("public override object Eval(uint exprNo){");
-      sb.Append("switch(exprNo){");
+      sb.Append("public override object Eval(uint exprNo) {\r\n");
+      sb.Append("switch(exprNo) {\r\n");
       var i = 0;
       foreach (var expr in expressions)
       {
@@ -256,9 +282,9 @@ namespace Sovos.CSharpCodeEvaluator
         sb.Append(i++);
         sb.Append(": ");
         sb.Append(expr);
-        sb.Append(";");
+        sb.Append(";\r\n");
       }
-      sb.Append("default: throw new Exception(\"Invalid exprNo parameter\");};}}}");
+      sb.Append("default: throw new Exception(\"Invalid exprNo parameter\");\r\n};\r\n}\r\n}\r\n}");
       programText = sb.ToString();
       state = State.CodeGenerated;
     }
@@ -270,11 +296,17 @@ namespace Sovos.CSharpCodeEvaluator
       using (var codeProvider = new CSharpCodeProvider())
       {
         compilerParameters.OutputAssembly = "";
-        compilerParameters.TempFiles = new TempFileCollection(Path.GetTempPath(), false);
+        Directory.CreateDirectory(TempLocation);
+        compilerParameters.TempFiles = new TempFileCollection(TempLocation, false);
         prg = codeProvider.CompileAssemblyFromSource(compilerParameters, ProgramText);
       }
       if (prg.Errors.Count > 0)
-        throw new InvalidExpressionException(prg.Errors[0].ErrorText);
+      {
+        var lines = ProgramText.Split(new [] { Environment.NewLine }, StringSplitOptions.None);
+        throw new InvalidExpressionException(string.Format("{0} in expression \"{1}\"", 
+                                             prg.Errors[0].ErrorText, 
+                                             prg.Errors[0].Line > 0 ? lines[prg.Errors[0].Line - 1] : "<source code not found>"));
+      }
       state = State.Compiled;
     }
 
@@ -310,6 +342,12 @@ namespace Sovos.CSharpCodeEvaluator
     {
       Prepare();
       return holderObjectAccesor.Eval(exprNo);
+    }
+
+    public object Invoke(string methodName, object[] args)
+    {
+      Prepare();
+      return holderObjectAccesor.Invoke(methodName, args);
     }
 
     public void UnloadAppDomain()

@@ -203,7 +203,7 @@ namespace csharp_code_evaluator_ut
     public void ExpressionWithSyntaxError_Fails()
     {
       using (var expression = new CSharpExpression("1 + obj.int_Field"))
-        Assert.AreEqual(3, expression.Execute());
+        expression.Compile();
     }
 
     [Test]
@@ -243,15 +243,17 @@ namespace csharp_code_evaluator_ut
       var tasks = new Task[4]; // We will compile expressions in 4 threads
       for (var i = 1; i < 25; i++)
       {
+        var expressions = new List<CSharpExpression>();
         for (var j = 0; j < tasks.Length - 1; j++)
           tasks[j] = Task.Run(() => Compile("1 + 1"));
         for (var j = 0; j < tasks.Length - 1; j++)
         {
           var expression = await (Task<CSharpExpression>)tasks[j];
+          expressions.Add(expression);
           Assert.AreEqual(2, expression.Execute());
         }
-        for (var j = 0; j < tasks.Length - 1; j++)
-          tasks[j].Dispose();
+        foreach (var expr in expressions)
+          expr.Dispose();
       }
     }
 
@@ -405,6 +407,64 @@ namespace csharp_code_evaluator_ut
           }");
         Assert.AreEqual(0, expression.AddCodeSnippet("var i = 1; return Tester.Test() + i"));
         Assert.AreEqual(11, expression.Execute());
+      }
+    }
+
+    [Test]
+    public void InvokeMethod_Success()
+    {
+      using (var expression = new CSharpExpression())
+      {
+        expression.AddMember(
+          @"public int Test() {
+              return 10;            
+            }");
+        Assert.AreEqual(10, expression.Invoke("Test", null));
+      }
+    }
+
+    [Test]
+    public void InvokeMethodWithParams_Success()
+    {
+      using (var expression = new CSharpExpression())
+      {
+        expression.AddMember(
+          @"public int Test(int a) {       
+              return a;            
+            }");
+        Assert.AreEqual(5, expression.Invoke("Test", new object[]{5}));
+      }
+    }
+
+    [Test]
+    public void InvokeMethodWithParamsModifyGlobalsMultiAppDomain_Success()
+    {
+      using (var expression = new CSharpExpression())
+      {
+        expression.ExecuteInSeparateAppDomain = true;
+        expression.AddMember(
+          @"public int Test(int a) {  
+              global.a = 20;     
+              return a;            
+            }");
+        expression.AddExpression("global.a");
+        Assert.AreEqual(5, expression.Invoke("Test", new object[] { 5 }));
+        Assert.AreEqual(20, expression.Execute());
+      }
+    }
+
+    [Test]
+    public void InvokeVoidMethodWithParamsModifyGlobals_Success()
+    {
+      using (var expression = new CSharpExpression())
+      {
+        expression.AddMember(
+          @"public void Test(int a) {  
+              global.a = a;                            
+            }");
+        expression.AddExpression("global.a");
+        Assert.AreEqual(null, expression.Invoke("Test", new object[] { 5 }));
+        Assert.AreEqual(5, expression.Execute());
       }
     }
   }
