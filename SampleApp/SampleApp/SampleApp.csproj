@@ -45,11 +45,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\src\CSharpCodeEvaluator.cs">
-      <Link>Refs\CSharpCodeEvaluator.cs</Link>
+    <Compile Include="..\..\src\CSharpScript.cs">
+      <Link>Refs\CSharpScript.cs</Link>
     </Compile>
-    <Compile Include="..\..\src\CSharpExpressionBase.cs">
-      <Link>Refs\CSharpExpressionBase.cs</Link>
+    <Compile Include="..\..\src\CSharpScriptObjectBase.cs">
+      <Link>Refs\CSharpScriptObjectBase.cs</Link>
     </Compile>
     <Compile Include="..\..\src\IntPtrConverter.cs">
       <Link>Refs\IntPtrConverter.cs</Link>
