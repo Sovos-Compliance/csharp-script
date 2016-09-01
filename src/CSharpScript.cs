@@ -63,7 +63,7 @@ namespace Sovos.Scripting
     private bool executeInSeparateAppDomain;
     #endregion
 
-    #region Constructors and Desturctor
+    #region Constructors, Destructor and Disposal methods
     public CSharpScript(string Expression = "")
     {
       compilerParameters = new CompilerParameters
@@ -225,7 +225,7 @@ namespace Sovos.Scripting
     {
       InvalidateIfCompiled();
       if (objectsInScope.ContainsKey(name))
-        throw new CSharpScriptException(String.Format("Object in scope named '{0}' already exists", name));
+        throw new CSharpScriptException(string.Format("Object in scope named '{0}' already exists", name));
       objectsInScope.Add(name, obj);
       AddReferencedAssembly(Path.GetFileName(obj.GetType().Assembly.Location));
       AddUsedNamespace(obj.GetType().Namespace);
@@ -234,7 +234,7 @@ namespace Sovos.Scripting
     public void ReplaceObjectInScope(string name, object obj)
     {
       if (!objectsInScope.ContainsKey(name))
-        throw new CSharpScriptException(String.Format("Object in scope named '{0}' not found", name));
+        throw new CSharpScriptException(string.Format("Object in scope named '{0}' not found", name));
       objectsInScope[name] = obj;
       SetHostOjectField(name, obj);
     }
