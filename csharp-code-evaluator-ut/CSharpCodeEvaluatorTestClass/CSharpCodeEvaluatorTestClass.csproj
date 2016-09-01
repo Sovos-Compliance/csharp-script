@@ -43,12 +43,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\SampleApp\SampleApp\Src\SovosExpandoBuilder.cs">
-      <Link>SovosExpandoBuilder.cs</Link>
+      <Link>Refs\SovosExpandoBuilder.cs</Link>
     </Compile>
     <Compile Include="..\..\src\SovosExpandoObject.cs">
-      <Link>SovosExpandoObject.cs</Link>
+      <Link>Refs\SovosExpandoObject.cs</Link>
     </Compile>
-    <Compile Include="CSharpCodeEvaluatorTestClass.cs" />
+    <Compile Include="Src\CSharpCodeEvaluatorTestClass.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
