@@ -21,21 +21,25 @@ public class TestClass
 later the following can be executed:
 
 ```C#
-var expression = new CSharpScript("1 + obj.int_Field");
-var obj = new TestClass {int_Field = 2};
-expression.AddObjectInScope("obj", obj);
-Assert.AreEqual(3, expression.Execute());
+using(var expression = new CSharpScript("1 + obj.int_Field"))
+{
+  var obj = new TestClass {int_Field = 2};
+  expression.AddObjectInScope("obj", obj);
+  Assert.AreEqual(3, expression.Execute());
+}
 ```
 CSharpScript also support working with "dynamic" types via ExpandoObject.
 
 the following also works:
 
 ```C#
-var expression = new CSharpScript("1 + obj.int_Field");
-IDictionary<string, object> obj = new ExpandoObject();
-obj.Add("int_Field", 2);
-expression.AddObjectInScope("obj", obj);
-Assert.AreEqual(3, expression.Execute());
+using(var expression = new CSharpScript("1 + obj.int_Field"))
+{
+  IDictionary<string, object> obj = new ExpandoObject();
+  obj.Add("int_Field", 2);
+  expression.AddObjectInScope("obj", obj);
+  Assert.AreEqual(3, expression.Execute());
+}
 ```
 
 you can also use "code snippets" that do more than just a be an evaluatable expresion:
