@@ -47,8 +47,12 @@
     <Compile Include="..\SampleApp\SampleApp\Src\SovosExpandoBuilder.cs">
       <Link>Src\SovosExpandoBuilder.cs</Link>
     </Compile>
-    <Compile Include="..\src\CSharpScript.cs" />
-    <Compile Include="..\src\CSharpScriptObjectBase.cs" />
+    <Compile Include="..\src\CSharpScript.cs">
+      <Link>Refs\CSharpScript.cs</Link>
+    </Compile>
+    <Compile Include="..\src\CSharpScriptObjectBase.cs">
+      <Link>Refs\CSharpScriptObjectBase.cs</Link>
+    </Compile>
     <Compile Include="..\src\IntPtrConverter.cs">
       <Link>Src\IntPtrConverter.cs</Link>
     </Compile>

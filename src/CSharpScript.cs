@@ -33,7 +33,7 @@ namespace Sovos.Scripting
   {
     public CSharpScriptException(string msg) : base(msg) {}
   }
-  
+ 
   public class CSharpScript : IDisposable
   {
     #region Private CSharpScript types
@@ -43,6 +43,27 @@ namespace Sovos.Scripting
       CodeGenerated = 1,
       Compiled = 2,
       Prepared = 3
+    }
+
+    private class CSharpScriptStringBuilder
+    {
+      private readonly StringBuilder sb;
+
+      public CSharpScriptStringBuilder()
+      {
+        sb = new StringBuilder();
+      }
+
+      public override string ToString()
+      {
+        return sb.ToString();
+      }
+
+      public static CSharpScriptStringBuilder operator +(CSharpScriptStringBuilder sb, string s)
+      {
+        sb.sb.Append(s);
+        return sb;
+      }
     }
     #endregion
 
@@ -249,43 +270,43 @@ namespace Sovos.Scripting
     public void GenerateCode()
     {
       if (state >= State.CodeGenerated) return;
-      var sb = new StringBuilder("");
+      var sb = new CSharpScriptStringBuilder();
       foreach (var _namespace in usesNamespaces)
       {
-        sb.Append("using ");
-        sb.Append(_namespace);
-        sb.Append(";\r\n");
+        sb += "using ";
+        sb += _namespace;
+        sb += ";\r\n";
       }
-      sb.Append("namespace Sovos.CodeEvaler {\r\n");
-      sb.Append("public class CodeEvaler : CSharpScriptObjectBase {\r\n");
-      sb.Append("private dynamic global;\r\n");
+      sb += "namespace Sovos.CodeEvaler {\r\n";
+      sb += "public class CodeEvaler : CSharpScriptObjectBase {\r\n";
+      sb += "private dynamic global;\r\n";
       foreach (var body in members)
       {
-        sb.Append(body);
-        sb.Append("\r\n");
+        sb += body;
+        sb += "\r\n";
       }
-      sb.Append("public CodeEvaler() {\r\n");
-      sb.Append("global=new ExpandoObject();\r\n}\r\n");
+      sb += "public CodeEvaler() {\r\n";
+      sb += "global=new ExpandoObject();\r\n}\r\n";
       foreach (var objInScope in objectsInScope)
       {
-        sb.Append("public ");
-        sb.Append(objInScope.Value is IDynamicMetaObjectProvider ? "dynamic" : objInScope.Value.GetType().Name);
-        sb.Append(" ");
-        sb.Append(objInScope.Key);
-        sb.Append(";\r\n");
+        sb += "public ";
+        sb += objInScope.Value is IDynamicMetaObjectProvider ? "dynamic" : objInScope.Value.GetType().Name;
+        sb += " ";
+        sb += objInScope.Key;
+        sb += ";\r\n";
       }
-      sb.Append("public override object Eval(uint exprNo) {\r\n");
-      sb.Append("switch(exprNo) {\r\n");
+      sb += "public override object Eval(uint exprNo) {\r\n";
+      sb += "switch(exprNo) {\r\n";
       var i = 0;
       foreach (var expr in expressions)
       {
-        sb.Append("case ");
-        sb.Append(i++);
-        sb.Append(": ");
-        sb.Append(expr);
-        sb.Append(";\r\n");
+        sb += "case ";
+        sb += i++.ToString();
+        sb += ": ";
+        sb += expr;
+        sb += ";\r\n";
       }
-      sb.Append("default: throw new Exception(\"Invalid exprNo parameter\");\r\n};\r\n}\r\n}\r\n}");
+      sb += "default: throw new Exception(\"Invalid exprNo parameter\");\r\n};\r\n}\r\n}\r\n}";
       programText = sb.ToString();
       state = State.CodeGenerated;
     }
