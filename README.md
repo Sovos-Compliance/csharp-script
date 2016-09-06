@@ -76,7 +76,7 @@ Assert.AreEqual(0, expression.Execute(1));
 Assert.AreEqual(1, expression.Execute(1));
 ```
 
-finally, if you need to register utilitatian functions within your context, you can do this:
+if you need to register utilitatian functions within your context, you can do this:
 
 ```C#
 var expression = new CSharpExpression();
@@ -88,3 +88,29 @@ expression.AddFunctionBody(
 Assert.AreEqual(0, expression.AddExpression("AddNumbers(1, 2)"));
 Assert.AreEqual(3, expression.Execute());
 ```
+
+if you want to register an entire utilitatian class:
+
+```C#
+[Test]
+using (var expression = new CSharpExpression())
+{
+  expression.AddClass(
+    @"private class Tester {
+        public static int Test() {
+          return 10;
+        }
+      }");
+  Assert.AreEqual(0, expression.AddCodeSnippet("var i = 1; return Tester.Test() + i"));
+  Assert.AreEqual(11, expression.Execute());
+}
+```
+
+Finally, you can use multiple AppDomains sharing live objects from the host application.
+The approach uses a hack, and there's many pre-requisites for it to work.
+Read comments https://github.com/Convey-Compliance/csharp-code-evaluator/blob/master/src/CSharpCodeEvaluator.cs#L2-L16 
+for the details.
+
+Also be aware that the evaluation invokation will be done thorough an interface that uses marshaling. So if you will
+run some of this scripts repeated times and you expect performance you should be aware that the cost of marshaling is
+about 20x a normal call when not using multiple AppDomains

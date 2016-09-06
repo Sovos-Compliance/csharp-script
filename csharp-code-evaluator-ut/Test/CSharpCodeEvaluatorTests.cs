@@ -4,6 +4,7 @@ using System.Dynamic;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Sovos.CSharpCodeEvaluator;
+using SampleApp;
 
 namespace csharp_code_evaluator_ut
 {
@@ -11,7 +12,7 @@ namespace csharp_code_evaluator_ut
   {
     public int int_Field;
   }
-
+  
   public class CSharpCodeEvaluatorTests
   {
     [LoaderOptimization(LoaderOptimization.MultiDomainHost)]
@@ -332,7 +333,7 @@ namespace csharp_code_evaluator_ut
     {
       using (var expression = new CSharpExpression())
       {
-        expression.AddFunctionBody(
+        expression.AddMember(
           @"private int AddNumbers(int a, int b)
           {
             return a + b; 
@@ -360,6 +361,50 @@ namespace csharp_code_evaluator_ut
         expression.ExecuteInSeparateAppDomain = true;
         expression.AddObjectInScope("a", 1);
         Assert.AreEqual(2, expression.Execute());
+      }
+    }
+
+    [Test]
+    public void UseExpandoObjectWithDynamicMethod_Success()
+    {
+      using (var expression = new CSharpExpression("\"a\" + a.Test(\"a\")"))
+      {
+        dynamic expando = new ExpandoObject();
+        expando.Test = new Func<string, string>(str => "Hello" + str);
+        expression.AddObjectInScope("a", expando);
+        Assert.AreEqual("aHelloa", expression.Execute());
+      }
+    }
+    
+    [Test]
+    public void UseCustomExpandoObjectWithProperty_Success()
+    {
+      using (var expression = new CSharpExpression())
+      {
+        var expando = SovosExpandoBuilder.Build();
+        expression.AddObjectInScope("sovosExpando", expando);
+        expression.AddCodeSnippet(
+          @"var v = sovosExpando.Test; // We read here a property that gets created on-the-fly
+            sovosExpando.Test = ""Hola Mundo""; // We enter a value here that will be cleared by ResetTest() call
+            sovosExpando.ResetTest(); // We invoke a dynamically created method here
+            sovosExpando.Test = v + sovosExpando.Test + ""Hello World""; // We use here the property read on-the-fly and stored in v
+            return sovosExpando.Test");
+        Assert.AreEqual("Hello World", expression.Execute());
+      }
+    }
+
+    public void ClassSnippet_Success()
+    {
+      using (var expression = new CSharpExpression())
+      {
+        expression.AddMember(
+          @"private class Tester {
+            public static int Test() {
+              return 10;
+            }
+          }");
+        Assert.AreEqual(0, expression.AddCodeSnippet("var i = 1; return Tester.Test() + i"));
+        Assert.AreEqual(11, expression.Execute());
       }
     }
   }

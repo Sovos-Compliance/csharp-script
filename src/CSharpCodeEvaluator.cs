@@ -1,11 +1,19 @@
 /*
   Very important note on the usage of this module: PLEASE READ IF YOU PLAN TO RUN YOUR SCRIPTS IN DIFFERENT AppDomain!!
 
+  First, why using different AppDomains (set property ExecuteInSeparateAppDomain to true)? 
+  You want to do this, if you plan to:
+     Run "scripted" C# code that changes "a lot" during the lifetime of a process. If you don't use different AppDomains 
+     you can't unload assemblies you may not need anymore
+
   In order to run scripts that access shared object from different AppDomain, you need to:
 
   1. Put all your shared objects in an assembly, and install the assembly in the GAC (Assembly must be signed for this!)
-  2. Use [LoaderOptimization(LoaderOptimization.MultiDomainHost] on your root program. If you don't do so, unloading of AppDomain (and therefore of temporary assemblies) will
-     simply fail and you will clutter your app with assemblies you are not intending to keep loaded
+  2. Use [LoaderOptimization(LoaderOptimization.MultiDomainHost] on your root program. If you don't do so, unloading of 
+     AppDomain (and therefore of temporary assemblies) will simply fail and you will clutter your app with assemblies 
+     you are not intending to keep loaded
+  3. If you run your app from the VS debugger, go to Properties in your project, select Debug tab and make sure 
+     "Enable the Visual Studio hosting process" is unchecked
  */
 
 using System;
@@ -41,7 +49,7 @@ namespace Sovos.CSharpCodeEvaluator
     private State state;
     private uint expressionCount;
     private readonly List<string> expressions;
-    private readonly List<string> functions; 
+    private readonly List<string> members;
     private readonly CompilerParameters compilerParameters;
     private readonly Dictionary<string, object> objectsInScope;
     private readonly List<string> usesNamespaces;
@@ -52,7 +60,6 @@ namespace Sovos.CSharpCodeEvaluator
     private string programText;
     private AppDomain appDomain;
     private bool executeInSeparateAppDomain;
-
     #endregion
 
     #region Constructors and Desturctor
@@ -70,7 +77,7 @@ namespace Sovos.CSharpCodeEvaluator
       objectsInScope = new Dictionary<string, object>();
       usesNamespaces = new List<string> { "System", "System.Dynamic", "Sovos.Infrastructure", "System.Collections.Generic" };
       expressions = new List<string>();
-      functions = new List<string>();
+      members = new List<string>();
       if (Expression != "")
         AddExpression(Expression);
       state = State.NotCompiled;
@@ -145,7 +152,10 @@ namespace Sovos.CSharpCodeEvaluator
       {
         try
         {
-          holderObjectAccesor?.SetField(fieldName, ObjectAddress.GetAddress(obj));
+          if(!executeInSeparateAppDomain)
+            holderObjectAccesor.SetField(fieldName, obj);
+          else
+            holderObjectAccesor.SetField(fieldName, ObjectAddress.GetAddress(obj));
           break;
         }
         catch (NotSupportedException)
@@ -173,10 +183,10 @@ namespace Sovos.CSharpCodeEvaluator
       return AddCode(Expression + ";break");
     }
     
-    public void AddFunctionBody(string function)
+    public void AddMember(string body)
     {
       InvalidateIfCompiled();
-      functions.Add(function);
+      members.Add(body);
     }
 
     public void AddReferencedAssembly(string assemblyName)
@@ -225,14 +235,14 @@ namespace Sovos.CSharpCodeEvaluator
       sb.Append("namespace Sovos.CodeEvaler{");
       sb.Append("public class CodeEvaler:CSharpExpressionBase{");
       sb.Append("private dynamic global;");
-      foreach (var fn in functions)
-        sb.Append(fn);
+      foreach (var body in members)
+        sb.Append(body);
       sb.Append("public CodeEvaler(){");
       sb.Append("global=new ExpandoObject();}");
       foreach (var objInScope in objectsInScope)
       {
         sb.Append("public ");
-        sb.Append(objInScope.Value is ExpandoObject ? "dynamic" : objInScope.Value.GetType().Name);
+        sb.Append(objInScope.Value is ExpandoObject || objInScope.Value is DynamicObject ? "dynamic" : objInScope.Value.GetType().Name);
         sb.Append(" ");
         sb.Append(objInScope.Key);
         sb.Append(";");
@@ -330,7 +340,6 @@ namespace Sovos.CSharpCodeEvaluator
         compilerParameters.GenerateInMemory = !executeInSeparateAppDomain;
       }
     }
-
     #endregion
   }
 }

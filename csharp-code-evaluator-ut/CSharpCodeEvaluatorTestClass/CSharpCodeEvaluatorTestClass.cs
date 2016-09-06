@@ -1,5 +1,6 @@
 ﻿namespace CSharpCodeEvaluatorTestClass
 {
+  // ReSharper disable once InconsistentNaming
   public class TestClassInGACAssembly
   {
     public int a;
@@ -9,7 +10,7 @@
       a = 10;
     }
 
-    int Inc()
+    public int Inc()
     {
       return ++a;
     }
