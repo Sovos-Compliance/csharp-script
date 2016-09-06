@@ -1,16 +1,18 @@
 using System;
 using System.Collections.Generic;
+using Sovos.Infrastructure;
 
-namespace Sovos.Infrastructure
+namespace Sovos.Scripting.CSharpScriptObjectBase
 {
-  public interface ICSharpExpressionAccessor
+  public interface ICSharpScriptObjectAccessor
   {
     void SetField(string fieldName, KeyValuePair<IntPtr, int> obj);
     void SetField(string fieldName, object obj);
     object Eval(uint ExprNo);
+    object Invoke(string methodName, object[] args);
   }
 
-  public abstract class CSharpExpressionBase : MarshalByRefObject, ICSharpExpressionAccessor
+  public abstract class CSharpScriptObjectBase : MarshalByRefObject, ICSharpScriptObjectAccessor
   {
     private static readonly PtrConverter<object> converter = new PtrConverter<object>();
     public void SetField(string fieldName, KeyValuePair<IntPtr, int> obj)
@@ -26,5 +28,13 @@ namespace Sovos.Infrastructure
     }
 
     public abstract object Eval(uint ExprNo);
+
+    public object Invoke(string methodName, object[] args)
+    {
+      var method = GetType().GetMethod(methodName);
+      if (method != null)
+        return method.Invoke(this, args);
+      throw new MissingMethodException(string.Format("Method \"{0}\"not found", methodName));
+    }
   }
 }

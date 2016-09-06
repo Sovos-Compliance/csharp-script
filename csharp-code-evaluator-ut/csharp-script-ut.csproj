@@ -40,22 +40,18 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\SampleApp\SampleApp\Src\SovosExpandoBuilder.cs">
       <Link>Src\SovosExpandoBuilder.cs</Link>
     </Compile>
-    <Compile Include="..\src\CSharpCodeEvaluator.cs">
-      <Link>Src\CSharpCodeEvaluator.cs</Link>
+    <Compile Include="..\src\CSharpScript.cs">
+      <Link>Refs\CSharpScript.cs</Link>
     </Compile>
-    <Compile Include="..\src\CSharpExpressionBase.cs">
-      <Link>Src\CSharpExpressionBase.cs</Link>
+    <Compile Include="..\src\CSharpScriptObjectBase.cs">
+      <Link>Refs\CSharpScriptObjectBase.cs</Link>
     </Compile>
     <Compile Include="..\src\IntPtrConverter.cs">
       <Link>Src\IntPtrConverter.cs</Link>

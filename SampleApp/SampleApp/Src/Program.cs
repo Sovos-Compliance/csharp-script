@@ -1,6 +1,6 @@
 ﻿using System;
 using CSharpCodeEvaluatorTestClass;
-using Sovos.CSharpCodeEvaluator;
+using Sovos.Scripting;
 
 namespace SampleApp
 {
@@ -9,7 +9,7 @@ namespace SampleApp
     [LoaderOptimization(LoaderOptimization.MultiDomainHost)]
     static void Main(string[] args)
     {
-      var expression = new CSharpExpression("1 + a.a") {ExecuteInSeparateAppDomain = true};
+      var expression = new CSharpScript("1 + a.a") {ExecuteInSeparateAppDomain = true};
       // This snippet shows how a class on a assembly in the GAC can be used
       using (expression)
       {
@@ -19,7 +19,7 @@ namespace SampleApp
 
       // This snippet shows how building a SovosExpando, in an assembly installed in GAC works fine.
       // You can call all methods dynamically from the C# script
-      using (expression = new CSharpExpression() { ExecuteInSeparateAppDomain = true })
+      using (expression = new CSharpScript() { ExecuteInSeparateAppDomain = true })
       {
         var expando = SovosExpandoBuilder.Build();
         expression.AddObjectInScope("sovosExpando", expando);

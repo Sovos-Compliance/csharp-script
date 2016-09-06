@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Threading.Tasks;
 using NUnit.Framework;
-using Sovos.CSharpCodeEvaluator;
+using Sovos.Scripting;
 using SampleApp;
 
 namespace csharp_code_evaluator_ut
@@ -19,14 +19,14 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void BasicExpression_Success()
     {
-      using (var expression = new CSharpExpression("1 + 1"))
+      using (var expression = new CSharpScript("1 + 1"))
         Assert.AreEqual(2, expression.Execute());
     }
 
     [Test]
     public void CodeSnippet_Success()
     {
-      using (var expression = new CSharpExpression())
+      using (var expression = new CSharpScript())
       {
         Assert.AreEqual(0, expression.AddCodeSnippet("var i = 1; return 1 + i"));
         Assert.AreEqual(2, expression.Execute());
@@ -36,7 +36,7 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void VoidReturningCodeSnippet_Success()
     {
-      using (var expression = new CSharpExpression())
+      using (var expression = new CSharpScript())
       {
         Assert.AreEqual(0, expression.AddVoidReturnCodeSnippet("var i = 1; Console.WriteLine(i)"));
         Assert.AreEqual(null, expression.Execute());
@@ -46,9 +46,9 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void TwoBasicExpressions_Success()
     {
-      using (var expression1 = new CSharpExpression("1 + 1"))
+      using (var expression1 = new CSharpScript("1 + 1"))
       {
-        using (var expression2 = new CSharpExpression("2 + 2"))
+        using (var expression2 = new CSharpScript("2 + 2"))
           Assert.AreEqual(6, (int)expression1.Execute() + (int)expression2.Execute());
       }
     }
@@ -56,7 +56,7 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void ExpressionWithOneParameter_Success()
     {
-      using (var expression = new CSharpExpression("1 + a"))
+      using (var expression = new CSharpScript("1 + a"))
       {
         expression.AddObjectInScope("a", 1);
         Assert.AreEqual(2, expression.Execute());
@@ -66,7 +66,7 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void ExpressionWithOneParameterForceRecompilation_Success()
     {
-      using (var expression = new CSharpExpression("1 + a"))
+      using (var expression = new CSharpScript("1 + a"))
       {
         expression.AddObjectInScope("a", 1);
         Assert.AreEqual(2, expression.Execute());
@@ -78,7 +78,7 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void ExpressionWithTwoParameters_Success()
     {
-      using (var expression = new CSharpExpression("1 + a + c"))
+      using (var expression = new CSharpScript("1 + a + c"))
       {
         expression.AddObjectInScope("a", 1);
         expression.AddObjectInScope("c", 3);
@@ -87,10 +87,10 @@ namespace csharp_code_evaluator_ut
     }
 
     [Test]
-    [ExpectedException("Sovos.CSharpCodeEvaluator.CSharpExpressionException")]
+    [ExpectedException("Sovos.Scripting.CSharpScriptException")]
     public void ExpressionWithSameParameterTwice_Fails()
     {
-      using (var expression = new CSharpExpression("1 + a + a"))
+      using (var expression = new CSharpScript("1 + a + a"))
       {
         expression.AddObjectInScope("a", 1);
         expression.AddObjectInScope("a", 3);
@@ -101,7 +101,7 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void ExpressionReferencingLocalObject_Success()
     {
-      using (var expression = new CSharpExpression("1 + obj.int_Field"))
+      using (var expression = new CSharpScript("1 + obj.int_Field"))
       {
         var obj = new TestClass {int_Field = 2};
         expression.AddObjectInScope("obj", obj);
@@ -112,7 +112,7 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void RunExpressionTwiceReferencingReplacedLocalObject_Success()
     {
-      using (var expression = new CSharpExpression("1 + obj.int_Field"))
+      using (var expression = new CSharpScript("1 + obj.int_Field"))
       {
         var obj = new TestClass {int_Field = 2};
         expression.AddObjectInScope("obj", obj);
@@ -124,10 +124,10 @@ namespace csharp_code_evaluator_ut
     }
 
     [Test]
-    [ExpectedException("Sovos.CSharpCodeEvaluator.CSharpExpressionException")]
+    [ExpectedException("Sovos.Scripting.CSharpScriptException")]
     public void ReplacedNonExistingLocalObject_Fails()
     {
-      using (var expression = new CSharpExpression("1 + obj.int_Field"))
+      using (var expression = new CSharpScript("1 + obj.int_Field"))
       {
         var obj = new TestClass {int_Field = 2};
         expression.ReplaceObjectInScope("obj", obj);
@@ -138,7 +138,7 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void ExpressionReferencingTwoLocalObjects_Success()
     {
-      using (var expression = new CSharpExpression("obj2.int_Field + obj1.int_Field"))
+      using (var expression = new CSharpScript("obj2.int_Field + obj1.int_Field"))
       {
         var obj1 = new TestClass {int_Field = 2};
         var obj2 = new TestClass {int_Field = 3};
@@ -151,7 +151,7 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void ExecuteBasicExpressionTwice_Success()
     {
-      using (var expression = new CSharpExpression("1 + 1"))
+      using (var expression = new CSharpScript("1 + 1"))
       {
         Assert.AreEqual(2, expression.Execute());
         Assert.AreEqual(2, expression.Execute());
@@ -161,7 +161,7 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void ExpressionReferencingMutableLocalObject_Success()
     {
-      using (var expression = new CSharpExpression("1 + obj.int_Field"))
+      using (var expression = new CSharpScript("1 + obj.int_Field"))
       {
         var obj = new TestClass {int_Field = 2};
         expression.AddObjectInScope("obj", obj);
@@ -174,7 +174,7 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void ExpressionReferencingExpandoObject_Success()
     {
-      using (var expression = new CSharpExpression("1 + obj.int_Field"))
+      using (var expression = new CSharpScript("1 + obj.int_Field"))
       {
         IDictionary<string, object> obj = new ExpandoObject();
         obj.Add("int_Field", 2);
@@ -186,7 +186,7 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void ExpressionReferencingMutableExpandoObject_Success()
     {
-      using (var expression = new CSharpExpression("1 + obj.int_Field"))
+      using (var expression = new CSharpScript("1 + obj.int_Field"))
       {
         IDictionary<string, object> obj = new ExpandoObject();
         obj.Add("int_Field", 2);
@@ -202,14 +202,14 @@ namespace csharp_code_evaluator_ut
     [ExpectedException("System.Data.InvalidExpressionException")]
     public void ExpressionWithSyntaxError_Fails()
     {
-      using (var expression = new CSharpExpression("1 + obj.int_Field"))
-        Assert.AreEqual(3, expression.Execute());
+      using (var expression = new CSharpScript("1 + obj.int_Field"))
+        expression.Compile();
     }
 
     [Test]
     public void ShortPerformanceTest_Success()
     {
-      using (var expression = new CSharpExpression("1 + obj.int_Field"))
+      using (var expression = new CSharpScript("1 + obj.int_Field"))
       {
         var obj = new TestClass();
         expression.AddObjectInScope("obj", obj);
@@ -225,14 +225,14 @@ namespace csharp_code_evaluator_ut
     {
       for (var i = 1; i < 50; i++)
       {
-        using (var expression = new CSharpExpression(String.Format("{0} + 1", i)))
+        using (var expression = new CSharpScript(String.Format("{0} + 1", i)))
           Assert.AreEqual(1 + i, expression.Execute());
       }
     }
 
-    private static CSharpExpression Compile(string _expression)
+    private static CSharpScript Compile(string _expression)
     {
-      var expression = new CSharpExpression(_expression);
+      var expression = new CSharpScript(_expression);
       expression.Prepare();
       return expression;
     }
@@ -243,26 +243,28 @@ namespace csharp_code_evaluator_ut
       var tasks = new Task[4]; // We will compile expressions in 4 threads
       for (var i = 1; i < 25; i++)
       {
+        var expressions = new List<CSharpScript>();
         for (var j = 0; j < tasks.Length - 1; j++)
           tasks[j] = Task.Run(() => Compile("1 + 1"));
         for (var j = 0; j < tasks.Length - 1; j++)
         {
-          var expression = await (Task<CSharpExpression>)tasks[j];
+          var expression = await (Task<CSharpScript>)tasks[j];
+          expressions.Add(expression);
           Assert.AreEqual(2, expression.Execute());
         }
-        for (var j = 0; j < tasks.Length - 1; j++)
-          tasks[j].Dispose();
+        foreach (var expr in expressions)
+          expr.Dispose();
       }
     }
 
     [Test]
     public void StoreExpressionInDictionary_Success()
     {
-      var Dict = new Dictionary<string, CSharpExpression>();
-      using (var expr1 = new CSharpExpression("1 + 1"))
+      var Dict = new Dictionary<string, CSharpScript>();
+      using (var expr1 = new CSharpScript("1 + 1"))
       {
         Dict.Add(expr1.ProgramText, expr1);
-        CSharpExpression expr2;
+        CSharpScript expr2;
         Assert.True(Dict.TryGetValue(expr1.ProgramText, out expr2));
         Assert.AreEqual(2, expr2.Execute());
       }
@@ -271,7 +273,7 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void TwoBasicExpressionsInOneObject_Success()
     {
-      using (var expression = new CSharpExpression())
+      using (var expression = new CSharpScript())
       {
         Assert.AreEqual(0, expression.AddExpression("1 + 1"));
         Assert.AreEqual(1, expression.AddExpression("2 + 2"));
@@ -284,14 +286,14 @@ namespace csharp_code_evaluator_ut
     [ExpectedException("System.Exception")]
     public void RunNonExistingExpressionNumber_Fails()
     {
-      using (var expression = new CSharpExpression())
+      using (var expression = new CSharpScript())
         expression.Execute(2);
     }
 
     [Test]
     public void OneThousendExpressionsInOneObject_Success()
     {
-      using (var expression = new CSharpExpression())
+      using (var expression = new CSharpScript())
       {
         for (uint i = 1; i < 1000; i++)
           Assert.AreEqual(i - 1, expression.AddExpression(String.Format("{0} + 1", i)));
@@ -303,7 +305,7 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void ExpressionUsingGlobalToKeepStateAcrossExecutions_Success()
     {
-      using (var expression = new CSharpExpression())
+      using (var expression = new CSharpScript())
       {
         Assert.AreEqual(0, expression.AddVoidReturnCodeSnippet("global.a = 0"));
         Assert.AreEqual(1, expression.AddExpression("global.a++"));
@@ -316,7 +318,7 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void ExpressionUsingGlobalPerformance_Success()
     {
-      using (var expression = new CSharpExpression())
+      using (var expression = new CSharpScript())
       {
         Assert.AreEqual(0, expression.AddVoidReturnCodeSnippet("global.a = 0"));
         Assert.AreEqual(1, expression.AddExpression("global.a++"));
@@ -331,7 +333,7 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void CallInjectedFunction_Success()
     {
-      using (var expression = new CSharpExpression())
+      using (var expression = new CSharpScript())
       {
         expression.AddMember(
           @"private int AddNumbers(int a, int b)
@@ -346,7 +348,7 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void BasicExpressionSeparateAppDomain_Success()
     {
-      using (var expression = new CSharpExpression("1 + 1"))
+      using (var expression = new CSharpScript("1 + 1"))
       {
         expression.ExecuteInSeparateAppDomain = true;
         Assert.AreEqual(2, expression.Execute());
@@ -356,7 +358,7 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void BasicExpressionSeparateAppDomainShareIntegerObject_Success()
     {
-      using (var expression = new CSharpExpression("1 + a"))
+      using (var expression = new CSharpScript("1 + a"))
       {
         expression.ExecuteInSeparateAppDomain = true;
         expression.AddObjectInScope("a", 1);
@@ -367,7 +369,7 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void UseExpandoObjectWithDynamicMethod_Success()
     {
-      using (var expression = new CSharpExpression("\"a\" + a.Test(\"a\")"))
+      using (var expression = new CSharpScript("\"a\" + a.Test(\"a\")"))
       {
         dynamic expando = new ExpandoObject();
         expando.Test = new Func<string, string>(str => "Hello" + str);
@@ -379,7 +381,7 @@ namespace csharp_code_evaluator_ut
     [Test]
     public void UseCustomExpandoObjectWithProperty_Success()
     {
-      using (var expression = new CSharpExpression())
+      using (var expression = new CSharpScript())
       {
         var expando = SovosExpandoBuilder.Build();
         expression.AddObjectInScope("sovosExpando", expando);
@@ -395,7 +397,7 @@ namespace csharp_code_evaluator_ut
 
     public void ClassSnippet_Success()
     {
-      using (var expression = new CSharpExpression())
+      using (var expression = new CSharpScript())
       {
         expression.AddMember(
           @"private class Tester {
@@ -405,6 +407,64 @@ namespace csharp_code_evaluator_ut
           }");
         Assert.AreEqual(0, expression.AddCodeSnippet("var i = 1; return Tester.Test() + i"));
         Assert.AreEqual(11, expression.Execute());
+      }
+    }
+
+    [Test]
+    public void InvokeMethod_Success()
+    {
+      using (var expression = new CSharpScript())
+      {
+        expression.AddMember(
+          @"public int Test() {
+              return 10;            
+            }");
+        Assert.AreEqual(10, expression.Invoke("Test", null));
+      }
+    }
+
+    [Test]
+    public void InvokeMethodWithParams_Success()
+    {
+      using (var expression = new CSharpScript())
+      {
+        expression.AddMember(
+          @"public int Test(int a) {       
+              return a;            
+            }");
+        Assert.AreEqual(5, expression.Invoke("Test", new object[]{5}));
+      }
+    }
+
+    [Test]
+    public void InvokeMethodWithParamsModifyGlobalsMultiAppDomain_Success()
+    {
+      using (var expression = new CSharpScript())
+      {
+        expression.ExecuteInSeparateAppDomain = true;
+        expression.AddMember(
+          @"public int Test(int a) {  
+              global.a = 20;     
+              return a;            
+            }");
+        expression.AddExpression("global.a");
+        Assert.AreEqual(5, expression.Invoke("Test", new object[] { 5 }));
+        Assert.AreEqual(20, expression.Execute());
+      }
+    }
+
+    [Test]
+    public void InvokeVoidMethodWithParamsModifyGlobals_Success()
+    {
+      using (var expression = new CSharpScript())
+      {
+        expression.AddMember(
+          @"public void Test(int a) {  
+              global.a = a;                            
+            }");
+        expression.AddExpression("global.a");
+        Assert.AreEqual(null, expression.Invoke("Test", new object[] { 5 }));
+        Assert.AreEqual(5, expression.Execute());
       }
     }
   }

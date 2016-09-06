@@ -25,23 +25,45 @@ using System.IO;
 using System.Text;
 using Microsoft.CSharp;
 using Sovos.Infrastructure;
+using Sovos.Scripting.CSharpScriptObjectBase;
 
-namespace Sovos.CSharpCodeEvaluator
+namespace Sovos.Scripting
 {
-  public class CSharpExpressionException : Exception
+  public class CSharpScriptException : Exception
   {
-    public CSharpExpressionException(string msg) : base(msg) {}
+    public CSharpScriptException(string msg) : base(msg) {}
   }
-  
-  public class CSharpExpression : IDisposable
+ 
+  public class CSharpScript : IDisposable
   {
-    #region Private CSharpExpression types
+    #region Private CSharpScript types
     private enum State
     {
       NotCompiled = 0,
       CodeGenerated = 1,
       Compiled = 2,
       Prepared = 3
+    }
+
+    private class CSharpScriptStringBuilder
+    {
+      private readonly StringBuilder sb;
+
+      public CSharpScriptStringBuilder()
+      {
+        sb = new StringBuilder();
+      }
+
+      public override string ToString()
+      {
+        return sb.ToString();
+      }
+
+      public static CSharpScriptStringBuilder operator +(CSharpScriptStringBuilder sb, string s)
+      {
+        sb.sb.Append(s);
+        return sb;
+      }
     }
     #endregion
 
@@ -56,14 +78,14 @@ namespace Sovos.CSharpCodeEvaluator
 
     // These fields will be != null when there's a valid compiled and prepared expressions
     private CompilerResults prg;
-    private ICSharpExpressionAccessor holderObjectAccesor;
+    private ICSharpScriptObjectAccessor holderObjectAccesor;
     private string programText;
     private AppDomain appDomain;
     private bool executeInSeparateAppDomain;
     #endregion
 
-    #region Constructors and Desturctor
-    public CSharpExpression(string Expression = "")
+    #region Constructors, Destructor and Disposal methods
+    public CSharpScript(string Expression = "")
     {
       compilerParameters = new CompilerParameters
       {
@@ -75,7 +97,7 @@ namespace Sovos.CSharpCodeEvaluator
       AddReferencedAssembly("MICROSOFT.CSHARP.DLL");
       AddReferencedAssembly(Path.GetFileName(GetType().Assembly.Location));
       objectsInScope = new Dictionary<string, object>();
-      usesNamespaces = new List<string> { "System", "System.Dynamic", "Sovos.Infrastructure", "System.Collections.Generic" };
+      usesNamespaces = new List<string> { "System", "System.Dynamic", "Sovos.Scripting.CSharpScriptObjectBase", "System.Collections.Generic" };
       expressions = new List<string>();
       members = new List<string>();
       if (Expression != "")
@@ -83,7 +105,7 @@ namespace Sovos.CSharpCodeEvaluator
       state = State.NotCompiled;
     }
 
-    ~CSharpExpression()
+    ~CSharpScript()
     {
       Dispose(false);
     }
@@ -110,25 +132,37 @@ namespace Sovos.CSharpCodeEvaluator
 
     private void TryRemoveTemporaryAssembly()
     {
-      if (prg == null || !File.Exists(prg.PathToAssembly)) return;
+      if (prg != null && File.Exists(prg.PathToAssembly))
+        try
+        {
+          File.Delete(prg.PathToAssembly);
+        }
+        catch (Exception)
+        {
+          // ignore any exception trying to remove assembly. 
+          // very likely the assembly is loaded in memory
+        }
       try
       {
-        File.Delete(prg.PathToAssembly);
+        var tmpFiles = Directory.EnumerateFiles(TempLocation);
+        foreach (var file in tmpFiles)
+          File.Delete(file);
+        Directory.Delete(TempLocation);
       }
       catch (Exception)
       {
-        // ignore any exception trying to remove assembly. 
-        // very likely the assembly is loaded in memory
+        // ignore any exception trying to remove temp directory or its files 
+        // very likely there's still files being used
       }
     }
 
     private void Invalidate()
     {
       holderObjectAccesor = null;
-      prg = null;
       programText = "";
       TryUnloadAppDomain();
       TryRemoveTemporaryAssembly();
+      prg = null;
       appDomain = null;
       state = State.NotCompiled;
     }
@@ -163,6 +197,17 @@ namespace Sovos.CSharpCodeEvaluator
           // capture the exception and try again. This happens because there was a GC call between
           // the time we obtained the raw address of obj and the call to SetField()
         }
+      }
+    }
+
+    private string tempLocation;
+    private string TempLocation
+    {
+      get
+      {
+        if (string.IsNullOrEmpty(tempLocation))
+          tempLocation = string.Format("{0}\\sovos_csharpexpression_{1}\\", Path.GetTempPath(), GetHashCode());
+        return tempLocation;
       }
     }
     #endregion
@@ -201,7 +246,7 @@ namespace Sovos.CSharpCodeEvaluator
     {
       InvalidateIfCompiled();
       if (objectsInScope.ContainsKey(name))
-        throw new CSharpExpressionException(String.Format("Object in scope named '{0}' already exists", name));
+        throw new CSharpScriptException(string.Format("Object in scope named '{0}' already exists", name));
       objectsInScope.Add(name, obj);
       AddReferencedAssembly(Path.GetFileName(obj.GetType().Assembly.Location));
       AddUsedNamespace(obj.GetType().Namespace);
@@ -210,7 +255,7 @@ namespace Sovos.CSharpCodeEvaluator
     public void ReplaceObjectInScope(string name, object obj)
     {
       if (!objectsInScope.ContainsKey(name))
-        throw new CSharpExpressionException(String.Format("Object in scope named '{0}' not found", name));
+        throw new CSharpScriptException(string.Format("Object in scope named '{0}' not found", name));
       objectsInScope[name] = obj;
       SetHostOjectField(name, obj);
     }
@@ -225,40 +270,43 @@ namespace Sovos.CSharpCodeEvaluator
     public void GenerateCode()
     {
       if (state >= State.CodeGenerated) return;
-      var sb = new StringBuilder("");
+      var sb = new CSharpScriptStringBuilder();
       foreach (var _namespace in usesNamespaces)
       {
-        sb.Append("using ");
-        sb.Append(_namespace);
-        sb.Append(";");
+        sb += "using ";
+        sb += _namespace;
+        sb += ";\r\n";
       }
-      sb.Append("namespace Sovos.CodeEvaler{");
-      sb.Append("public class CodeEvaler:CSharpExpressionBase{");
-      sb.Append("private dynamic global;");
+      sb += "namespace Sovos.CodeEvaler {\r\n";
+      sb += "public class CodeEvaler : CSharpScriptObjectBase {\r\n";
+      sb += "private dynamic global;\r\n";
       foreach (var body in members)
-        sb.Append(body);
-      sb.Append("public CodeEvaler(){");
-      sb.Append("global=new ExpandoObject();}");
+      {
+        sb += body;
+        sb += "\r\n";
+      }
+      sb += "public CodeEvaler() {\r\n";
+      sb += "global=new ExpandoObject();\r\n}\r\n";
       foreach (var objInScope in objectsInScope)
       {
-        sb.Append("public ");
-        sb.Append(objInScope.Value is ExpandoObject || objInScope.Value is DynamicObject ? "dynamic" : objInScope.Value.GetType().Name);
-        sb.Append(" ");
-        sb.Append(objInScope.Key);
-        sb.Append(";");
+        sb += "public ";
+        sb += objInScope.Value is IDynamicMetaObjectProvider ? "dynamic" : objInScope.Value.GetType().Name;
+        sb += " ";
+        sb += objInScope.Key;
+        sb += ";\r\n";
       }
-      sb.Append("public override object Eval(uint exprNo){");
-      sb.Append("switch(exprNo){");
+      sb += "public override object Eval(uint exprNo) {\r\n";
+      sb += "switch(exprNo) {\r\n";
       var i = 0;
       foreach (var expr in expressions)
       {
-        sb.Append("case ");
-        sb.Append(i++);
-        sb.Append(": ");
-        sb.Append(expr);
-        sb.Append(";");
+        sb += "case ";
+        sb += i++.ToString();
+        sb += ": ";
+        sb += expr;
+        sb += ";\r\n";
       }
-      sb.Append("default: throw new Exception(\"Invalid exprNo parameter\");};}}}");
+      sb += "default: throw new Exception(\"Invalid exprNo parameter\");\r\n};\r\n}\r\n}\r\n}";
       programText = sb.ToString();
       state = State.CodeGenerated;
     }
@@ -270,11 +318,17 @@ namespace Sovos.CSharpCodeEvaluator
       using (var codeProvider = new CSharpCodeProvider())
       {
         compilerParameters.OutputAssembly = "";
-        compilerParameters.TempFiles = new TempFileCollection(Path.GetTempPath(), false);
+        Directory.CreateDirectory(TempLocation);
+        compilerParameters.TempFiles = new TempFileCollection(TempLocation, false);
         prg = codeProvider.CompileAssemblyFromSource(compilerParameters, ProgramText);
       }
       if (prg.Errors.Count > 0)
-        throw new InvalidExpressionException(prg.Errors[0].ErrorText);
+      {
+        var lines = ProgramText.Split(new [] { Environment.NewLine }, StringSplitOptions.None);
+        throw new InvalidExpressionException(string.Format("{0} in expression \"{1}\"", 
+                                             prg.Errors[0].ErrorText, 
+                                             prg.Errors[0].Line > 0 ? lines[prg.Errors[0].Line - 1] : "<source code not found>"));
+      }
       state = State.Compiled;
     }
 
@@ -290,10 +344,10 @@ namespace Sovos.CSharpCodeEvaluator
           LoaderOptimization = LoaderOptimization.MultiDomainHost
         };
         appDomain = AppDomain.CreateDomain("CSharpExpression_AppDomain" + GetHashCode(), AppDomain.CurrentDomain.Evidence, appDomainSetup);
-        holderObjectAccesor = (ICSharpExpressionAccessor) appDomain.CreateInstanceFromAndUnwrap(prg.PathToAssembly, "Sovos.CodeEvaler.CodeEvaler");
+        holderObjectAccesor = (ICSharpScriptObjectAccessor) appDomain.CreateInstanceFromAndUnwrap(prg.PathToAssembly, "Sovos.CodeEvaler.CodeEvaler");
       }
       else
-        holderObjectAccesor = (ICSharpExpressionAccessor)prg.CompiledAssembly.CreateInstance("Sovos.CodeEvaler.CodeEvaler");
+        holderObjectAccesor = (ICSharpScriptObjectAccessor)prg.CompiledAssembly.CreateInstance("Sovos.CodeEvaler.CodeEvaler");
       if (holderObjectAccesor == null)
         throw new NullReferenceException("Host object is null");
       foreach (var obj in objectsInScope)
@@ -310,6 +364,12 @@ namespace Sovos.CSharpCodeEvaluator
     {
       Prepare();
       return holderObjectAccesor.Eval(exprNo);
+    }
+
+    public object Invoke(string methodName, object[] args)
+    {
+      Prepare();
+      return holderObjectAccesor.Invoke(methodName, args);
     }
 
     public void UnloadAppDomain()
