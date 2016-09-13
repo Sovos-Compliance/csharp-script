@@ -180,16 +180,17 @@ namespace Sovos.Scripting
       return expressionCount++;
     }
 
-    private void SetHostOjectField(string fieldName, object obj)
+    private void SetHostOjectField(ICSharpScriptObjectAccessor scriptObject, string fieldName, object obj)
     {
+      if (scriptObject == null) return;
       while (true)
       {
         try
         {
           if(!executeInSeparateAppDomain)
-            holderObjectAccesor.SetField(fieldName, obj);
+            scriptObject.SetField(fieldName, obj);
           else
-            holderObjectAccesor.SetField(fieldName, ObjectAddress.GetAddress(obj));
+            scriptObject.SetField(fieldName, ObjectAddress.GetAddress(obj));
           break;
         }
         catch (NotSupportedException)
@@ -198,6 +199,32 @@ namespace Sovos.Scripting
           // the time we obtained the raw address of obj and the call to SetField()
         }
       }
+    }
+
+    private void SetObjectsInScope(ICSharpScriptObjectAccessor scriptObject)
+    {
+      foreach (var obj in objectsInScope)
+        SetHostOjectField(scriptObject, obj.Key, obj.Value);
+    }
+
+    private object BuildObject()
+    {
+      return executeInSeparateAppDomain ?
+             appDomain.CreateInstanceFromAndUnwrap(prg.PathToAssembly, "Sovos.CodeEvaler.CodeEvaler") :
+             prg.CompiledAssembly.CreateInstance("Sovos.CodeEvaler.CodeEvaler");
+    }
+
+    private void PrepareSeparateAppDomainIfNeeded()
+    {
+      if (!executeInSeparateAppDomain) return;
+      if (appDomain != null) return;
+      var appDomainSetup = new AppDomainSetup()
+      {
+        ApplicationBase = AppDomain.CurrentDomain.BaseDirectory,
+        LoaderOptimization = LoaderOptimization.MultiDomainHost
+      };
+      appDomain = AppDomain.CreateDomain("CSharpExpression_AppDomain" + GetHashCode(),
+        AppDomain.CurrentDomain.Evidence, appDomainSetup);
     }
 
     private string tempLocation;
@@ -257,7 +284,7 @@ namespace Sovos.Scripting
       if (!objectsInScope.ContainsKey(name))
         throw new CSharpScriptException(string.Format("Object in scope named '{0}' not found", name));
       objectsInScope[name] = obj;
-      SetHostOjectField(name, obj);
+      SetHostOjectField(holderObjectAccesor, name, obj);
     }
 
     public void AddUsedNamespace(string _namespace)
@@ -331,28 +358,28 @@ namespace Sovos.Scripting
       }
       state = State.Compiled;
     }
-
-    public void Prepare()
+    
+    public void Prepare(bool buildDefaultObject = true)
     {
       if (state == State.Prepared) return;
       Compile();
-      if (executeInSeparateAppDomain)
+      PrepareSeparateAppDomainIfNeeded();
+      if (buildDefaultObject)
       {
-        var appDomainSetup = new AppDomainSetup()
-        {
-          ApplicationBase = AppDomain.CurrentDomain.BaseDirectory,
-          LoaderOptimization = LoaderOptimization.MultiDomainHost
-        };
-        appDomain = AppDomain.CreateDomain("CSharpExpression_AppDomain" + GetHashCode(), AppDomain.CurrentDomain.Evidence, appDomainSetup);
-        holderObjectAccesor = (ICSharpScriptObjectAccessor) appDomain.CreateInstanceFromAndUnwrap(prg.PathToAssembly, "Sovos.CodeEvaler.CodeEvaler");
+        holderObjectAccesor = (ICSharpScriptObjectAccessor) BuildObject();
+        if (holderObjectAccesor == null)
+          throw new NullReferenceException("Default host object is null");
+        SetObjectsInScope(holderObjectAccesor);
       }
-      else
-        holderObjectAccesor = (ICSharpScriptObjectAccessor)prg.CompiledAssembly.CreateInstance("Sovos.CodeEvaler.CodeEvaler");
-      if (holderObjectAccesor == null)
-        throw new NullReferenceException("Host object is null");
-      foreach (var obj in objectsInScope)
-        SetHostOjectField(obj.Key, obj.Value);
       state = State.Prepared;
+    }
+
+    public object CreateScriptObject()
+    {
+      Prepare(false);
+      var obj = BuildObject();
+      SetObjectsInScope((ICSharpScriptObjectAccessor) obj);
+      return obj;
     }
 
     public void Unprepare()
@@ -360,16 +387,32 @@ namespace Sovos.Scripting
       Invalidate();
     }
     
+    public object Execute(object hostObject, uint exprNo = 0, bool resetObjectsInScope = false)
+    {
+      Prepare();
+      if(resetObjectsInScope)
+        SetObjectsInScope((ICSharpScriptObjectAccessor)hostObject);
+      return ((ICSharpScriptObjectAccessor)hostObject).Eval(exprNo);
+    }
+
     public object Execute(uint exprNo = 0)
     {
       Prepare();
-      return holderObjectAccesor.Eval(exprNo);
+      return Execute(holderObjectAccesor, exprNo);
+    }
+
+    public object Invoke(object hostObject, string methodName, object[] args, bool resetObjectsInScope = false)
+    {
+      Prepare();
+      if (resetObjectsInScope)
+        SetObjectsInScope((ICSharpScriptObjectAccessor)hostObject);
+      return ((ICSharpScriptObjectAccessor)hostObject).Invoke(methodName, args);
     }
 
     public object Invoke(string methodName, object[] args)
     {
       Prepare();
-      return holderObjectAccesor.Invoke(methodName, args);
+      return Invoke(holderObjectAccesor, methodName, args);
     }
 
     public void UnloadAppDomain()

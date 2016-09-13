@@ -467,5 +467,67 @@ namespace csharp_code_evaluator_ut
         Assert.AreEqual(5, expression.Execute());
       }
     }
+
+    [Test]
+    public void CreateTwoObjectsMaintainingDifferentState_Success()
+    {
+      using (var script = new CSharpScript())
+      {
+        script.AddMember(
+          @"public void Test(int a) {  
+              global.a = a;                            
+            }");
+        script.AddExpression("global.a");
+        var obj_a = script.CreateScriptObject();
+        var obj_b = script.CreateScriptObject();
+        Assert.AreEqual(null, script.Invoke(obj_a, "Test", new object[] { 5 }));
+        Assert.AreEqual(null, script.Invoke(obj_b, "Test", new object[] { 10 }));
+        Assert.AreEqual(5, script.Execute(obj_a));
+        Assert.AreEqual(10, script.Execute(obj_b));
+      }
+    }
+
+    [Test]
+    public void CreateTwoObjectsWithObjectInScopeMaintainingDifferentState_Success()
+    {
+      using (var script = new CSharpScript())
+      {
+        script.AddMember(
+          @"public void Test(int a) {  
+              global.a = a;                            
+            }");
+        script.AddExpression("global.a + i");
+        script.AddObjectInScope("i", 1);
+        var obj_a = script.CreateScriptObject();
+        var obj_b = script.CreateScriptObject();
+        Assert.AreEqual(null, script.Invoke(obj_a, "Test", new object[] { 5 }));
+        Assert.AreEqual(null, script.Invoke(obj_b, "Test", new object[] { 10 }));
+        Assert.AreEqual(6, script.Execute(obj_a));
+        Assert.AreEqual(11, script.Execute(obj_b));
+      }
+    }
+
+    [Test]
+    public void CreateTwoObjectsWithObjectInScopeResettingIt_Success()
+    {
+      using (var script = new CSharpScript())
+      {
+        script.AddMember(
+          @"public void Test(int a) {  
+              global.a = a;                            
+            }");
+        script.AddExpression("global.a + i");
+        script.AddObjectInScope("i", 1);
+        var obj_a = script.CreateScriptObject();
+        var obj_b = script.CreateScriptObject();
+        Assert.AreEqual(null, script.Invoke(obj_a, "Test", new object[] { 5 }));
+        Assert.AreEqual(null, script.Invoke(obj_b, "Test", new object[] { 10 }));
+        Assert.AreEqual(6, script.Execute(obj_a));
+        Assert.AreEqual(11, script.Execute(obj_b));
+        script.ReplaceObjectInScope("i", 2);
+        Assert.AreEqual(7, script.Execute(obj_a, 0, true));
+        Assert.AreEqual(11, script.Execute(obj_b));
+      }
+    }
   }
 }
