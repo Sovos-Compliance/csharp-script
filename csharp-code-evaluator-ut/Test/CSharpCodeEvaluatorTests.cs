@@ -524,8 +524,8 @@ namespace csharp_code_evaluator_ut
         Assert.AreEqual(null, script.Invoke(obj_b, "Test", new object[] { 10 }));
         Assert.AreEqual(6, script.Execute(obj_a));
         Assert.AreEqual(11, script.Execute(obj_b));
-        script.ReplaceObjectInScope("i", 2);
-        Assert.AreEqual(7, script.Execute(obj_a, 0, true));
+        script.ReplaceObjectInScope(obj_a, "i", 2);
+        Assert.AreEqual(7, script.Execute(obj_a));
         Assert.AreEqual(11, script.Execute(obj_b));
       }
     }

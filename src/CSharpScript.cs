@@ -170,14 +170,22 @@ namespace Sovos.Scripting
     private void InvalidateIfCompiled()
     {
       if (state == State.NotCompiled) return;
-      Invalidate();
+      lock (this)
+      {
+        if (state == State.NotCompiled) return;
+
+        Invalidate();
+      }
     }
 
     private uint AddCode(string Expression)
     {
       InvalidateIfCompiled();
-      expressions.Add(Expression);
-      return expressionCount++;
+      lock (this)
+      {
+        expressions.Add(Expression);
+        return expressionCount++;
+      }
     }
 
     private void SetHostOjectField(ICSharpScriptObjectAccessor scriptObject, string fieldName, object obj)
@@ -203,28 +211,38 @@ namespace Sovos.Scripting
 
     private void SetObjectsInScope(ICSharpScriptObjectAccessor scriptObject)
     {
-      foreach (var obj in objectsInScope)
-        SetHostOjectField(scriptObject, obj.Key, obj.Value);
+      lock (this)
+        foreach (var obj in objectsInScope)
+          SetHostOjectField(scriptObject, obj.Key, obj.Value);
     }
 
     private object BuildObject()
     {
-      return executeInSeparateAppDomain ?
-             appDomain.CreateInstanceFromAndUnwrap(prg.PathToAssembly, "Sovos.CodeEvaler.CodeEvaler") :
-             prg.CompiledAssembly.CreateInstance("Sovos.CodeEvaler.CodeEvaler");
+      if (!executeInSeparateAppDomain)
+        return prg.CompiledAssembly.CreateInstance("Sovos.CodeEvaler.CodeEvaler");
+      lock (this)
+      {
+        // ToDo: Do we need lock for this?
+        return appDomain.CreateInstanceFromAndUnwrap(prg.PathToAssembly, "Sovos.CodeEvaler.CodeEvaler");
+      }
     }
 
     private void PrepareSeparateAppDomainIfNeeded()
     {
       if (!executeInSeparateAppDomain) return;
       if (appDomain != null) return;
-      var appDomainSetup = new AppDomainSetup()
+      lock (this)
       {
-        ApplicationBase = AppDomain.CurrentDomain.BaseDirectory,
-        LoaderOptimization = LoaderOptimization.MultiDomainHost
-      };
-      appDomain = AppDomain.CreateDomain("CSharpExpression_AppDomain" + GetHashCode(),
-        AppDomain.CurrentDomain.Evidence, appDomainSetup);
+        if (appDomain != null) return;
+
+        var appDomainSetup = new AppDomainSetup()
+        {
+          ApplicationBase = AppDomain.CurrentDomain.BaseDirectory,
+          LoaderOptimization = LoaderOptimization.MultiDomainHost
+        };
+        appDomain = AppDomain.CreateDomain("CSharpExpression_AppDomain" + GetHashCode(),
+          AppDomain.CurrentDomain.Evidence, appDomainSetup);
+      }
     }
 
     private string tempLocation;
@@ -252,111 +270,135 @@ namespace Sovos.Scripting
 
     public uint AddCodeSnippet(string Expression)
     {
-      return AddCode(Expression + ";break");
+      return AddCode(Expression);
     }
     
     public void AddMember(string body)
     {
       InvalidateIfCompiled();
-      members.Add(body);
+      lock (this)
+        members.Add(body);
     }
 
     public void AddReferencedAssembly(string assemblyName)
     {
       InvalidateIfCompiled();
       assemblyName = assemblyName.ToUpper();
-      if (!compilerParameters.ReferencedAssemblies.Contains(assemblyName))
-        compilerParameters.ReferencedAssemblies.Add(assemblyName);
+      lock (this)
+        if (!compilerParameters.ReferencedAssemblies.Contains(assemblyName))
+          compilerParameters.ReferencedAssemblies.Add(assemblyName);
     }
 
     public void AddObjectInScope(string name, object obj)
     {
       InvalidateIfCompiled();
-      if (objectsInScope.ContainsKey(name))
-        throw new CSharpScriptException(string.Format("Object in scope named '{0}' already exists", name));
-      objectsInScope.Add(name, obj);
-      AddReferencedAssembly(Path.GetFileName(obj.GetType().Assembly.Location));
-      AddUsedNamespace(obj.GetType().Namespace);
+      lock (this)
+      {
+        if (objectsInScope.ContainsKey(name))
+          throw new CSharpScriptException(string.Format("Object in scope named '{0}' already exists", name));
+        objectsInScope.Add(name, obj);
+        AddReferencedAssembly(Path.GetFileName(obj.GetType().Assembly.Location));
+        AddUsedNamespace(obj.GetType().Namespace);
+      }
+    }
+
+    public void ReplaceObjectInScope(object scriptObject, string name, object obj)
+    {
+      SetHostOjectField((ICSharpScriptObjectAccessor) scriptObject, name, obj);
     }
 
     public void ReplaceObjectInScope(string name, object obj)
     {
-      if (!objectsInScope.ContainsKey(name))
-        throw new CSharpScriptException(string.Format("Object in scope named '{0}' not found", name));
-      objectsInScope[name] = obj;
-      SetHostOjectField(holderObjectAccesor, name, obj);
+      lock (this)
+      {
+        if (!objectsInScope.ContainsKey(name))
+          throw new CSharpScriptException(string.Format("Object in scope named '{0}' not found", name));
+        objectsInScope[name] = obj;
+      }
+      ReplaceObjectInScope(holderObjectAccesor, name, obj);
     }
 
     public void AddUsedNamespace(string _namespace)
     {
       InvalidateIfCompiled();
-      if(!usesNamespaces.Contains(_namespace))
-        usesNamespaces.Add(_namespace);
+      lock (this)
+        if (!usesNamespaces.Contains(_namespace))
+          usesNamespaces.Add(_namespace);
     }
 
     public void GenerateCode()
     {
       if (state >= State.CodeGenerated) return;
-      var sb = new CSharpScriptStringBuilder();
-      foreach (var _namespace in usesNamespaces)
+      lock (this)
       {
-        sb += "using ";
-        sb += _namespace;
-        sb += ";\r\n";
+        if (state >= State.CodeGenerated) return;
+
+        var sb = new CSharpScriptStringBuilder();
+        foreach (var _namespace in usesNamespaces)
+        {
+          sb += "using ";
+          sb += _namespace;
+          sb += ";\r\n";
+        }
+        sb += "namespace Sovos.CodeEvaler {\r\n";
+        sb += "public class CodeEvaler : CSharpScriptObjectBase {\r\n";
+        sb += "private dynamic global;\r\n";
+        foreach (var body in members)
+        {
+          sb += body;
+          sb += "\r\n";
+        }
+        sb += "public CodeEvaler() {\r\n";
+        sb += "global=new ExpandoObject();\r\n}\r\n";
+        foreach (var objInScope in objectsInScope)
+        {
+          sb += "public ";
+          sb += objInScope.Value is IDynamicMetaObjectProvider ? "dynamic" : objInScope.Value.GetType().Name;
+          sb += " ";
+          sb += objInScope.Key;
+          sb += ";\r\n";
+        }
+        sb += "public override object Eval(uint exprNo) {\r\n";
+        sb += "switch(exprNo) {\r\n";
+        var i = 0;
+        foreach (var expr in expressions)
+        {
+          sb += "case ";
+          sb += i++.ToString();
+          sb += ": ";
+          sb += expr;
+          sb += ";\r\n";
+        }
+        sb += "default: throw new Exception(\"Invalid exprNo parameter\");\r\n};\r\n}\r\n}\r\n}";
+        programText = sb.ToString();
+        state = State.CodeGenerated;
       }
-      sb += "namespace Sovos.CodeEvaler {\r\n";
-      sb += "public class CodeEvaler : CSharpScriptObjectBase {\r\n";
-      sb += "private dynamic global;\r\n";
-      foreach (var body in members)
-      {
-        sb += body;
-        sb += "\r\n";
-      }
-      sb += "public CodeEvaler() {\r\n";
-      sb += "global=new ExpandoObject();\r\n}\r\n";
-      foreach (var objInScope in objectsInScope)
-      {
-        sb += "public ";
-        sb += objInScope.Value is IDynamicMetaObjectProvider ? "dynamic" : objInScope.Value.GetType().Name;
-        sb += " ";
-        sb += objInScope.Key;
-        sb += ";\r\n";
-      }
-      sb += "public override object Eval(uint exprNo) {\r\n";
-      sb += "switch(exprNo) {\r\n";
-      var i = 0;
-      foreach (var expr in expressions)
-      {
-        sb += "case ";
-        sb += i++.ToString();
-        sb += ": ";
-        sb += expr;
-        sb += ";\r\n";
-      }
-      sb += "default: throw new Exception(\"Invalid exprNo parameter\");\r\n};\r\n}\r\n}\r\n}";
-      programText = sb.ToString();
-      state = State.CodeGenerated;
     }
 
     public void Compile()
     {
       if (state >= State.Compiled) return;
       GenerateCode();
-      using (var codeProvider = new CSharpCodeProvider())
+      lock (this)
       {
-        compilerParameters.OutputAssembly = "";
-        Directory.CreateDirectory(TempLocation);
-        compilerParameters.TempFiles = new TempFileCollection(TempLocation, false);
-        prg = codeProvider.CompileAssemblyFromSource(compilerParameters, ProgramText);
+        if (state >= State.Compiled) return;
+
+        using (var codeProvider = new CSharpCodeProvider())
+        {
+          compilerParameters.OutputAssembly = "";
+          Directory.CreateDirectory(TempLocation);
+          compilerParameters.TempFiles = new TempFileCollection(TempLocation, false);
+          prg = codeProvider.CompileAssemblyFromSource(compilerParameters, ProgramText);
+        }
+        if (prg.Errors.Count > 0)
+        {
+          var lines = ProgramText.Split(new[] {Environment.NewLine}, StringSplitOptions.None);
+          throw new InvalidExpressionException(string.Format("{0} in expression \"{1}\"",
+            prg.Errors[0].ErrorText,
+            prg.Errors[0].Line > 0 ? lines[prg.Errors[0].Line - 1] : "<source code not found>"));
+        }
+        state = State.Compiled;
       }
-      if (prg.Errors.Count > 0)
-      {
-        var lines = ProgramText.Split(new [] { Environment.NewLine }, StringSplitOptions.None);
-        throw new InvalidExpressionException(string.Format("{0} in expression \"{1}\"", 
-                                             prg.Errors[0].ErrorText, 
-                                             prg.Errors[0].Line > 0 ? lines[prg.Errors[0].Line - 1] : "<source code not found>"));
-      }
-      state = State.Compiled;
     }
     
     public void Prepare(bool buildDefaultObject = true)
@@ -364,14 +406,19 @@ namespace Sovos.Scripting
       if (state == State.Prepared) return;
       Compile();
       PrepareSeparateAppDomainIfNeeded();
-      if (buildDefaultObject)
+      lock (this)
       {
-        holderObjectAccesor = (ICSharpScriptObjectAccessor) BuildObject();
-        if (holderObjectAccesor == null)
-          throw new NullReferenceException("Default host object is null");
-        SetObjectsInScope(holderObjectAccesor);
+        if (state == State.Prepared) return;
+
+        if (buildDefaultObject)
+        {
+          holderObjectAccesor = (ICSharpScriptObjectAccessor) BuildObject();
+          if (holderObjectAccesor == null)
+            throw new NullReferenceException("Default host object is null");
+          SetObjectsInScope(holderObjectAccesor);
+        }
+        state = State.Prepared;
       }
-      state = State.Prepared;
     }
 
     public object CreateScriptObject()
@@ -387,32 +434,30 @@ namespace Sovos.Scripting
       Invalidate();
     }
     
-    public object Execute(object hostObject, uint exprNo = 0, bool resetObjectsInScope = false)
+    public object Execute(object hostObject, uint exprNo = 0)
     {
       Prepare();
-      if(resetObjectsInScope)
-        SetObjectsInScope((ICSharpScriptObjectAccessor)hostObject);
       return ((ICSharpScriptObjectAccessor)hostObject).Eval(exprNo);
     }
 
     public object Execute(uint exprNo = 0)
     {
       Prepare();
-      return Execute(holderObjectAccesor, exprNo);
+      lock (this) 
+        return Execute(holderObjectAccesor, exprNo);
     }
 
-    public object Invoke(object hostObject, string methodName, object[] args, bool resetObjectsInScope = false)
+    public object Invoke(object hostObject, string methodName, object[] args)
     {
       Prepare();
-      if (resetObjectsInScope)
-        SetObjectsInScope((ICSharpScriptObjectAccessor)hostObject);
       return ((ICSharpScriptObjectAccessor)hostObject).Invoke(methodName, args);
     }
 
     public object Invoke(string methodName, object[] args)
     {
       Prepare();
-      return Invoke(holderObjectAccesor, methodName, args);
+      lock (this)
+        return Invoke(holderObjectAccesor, methodName, args);
     }
 
     public void UnloadAppDomain()
@@ -439,8 +484,13 @@ namespace Sovos.Scripting
       {
         if (value == executeInSeparateAppDomain) return;
         InvalidateIfCompiled();
-        executeInSeparateAppDomain = value;
-        compilerParameters.GenerateInMemory = !executeInSeparateAppDomain;
+        lock (this)
+        {
+          if (value == executeInSeparateAppDomain) return;
+
+          executeInSeparateAppDomain = value;
+          compilerParameters.GenerateInMemory = !executeInSeparateAppDomain;
+        }
       }
     }
     #endregion
