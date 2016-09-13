@@ -432,7 +432,7 @@ namespace Sovos.Scripting
     public void Unprepare()
     {
       lock(this)
-       Invalidate();
+        Invalidate();
     }
     
     public object Execute(object hostObject, uint exprNo = 0)
