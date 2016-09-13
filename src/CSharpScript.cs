@@ -431,7 +431,8 @@ namespace Sovos.Scripting
 
     public void Unprepare()
     {
-      Invalidate();
+      lock(this)
+       Invalidate();
     }
     
     public object Execute(object hostObject, uint exprNo = 0)
@@ -462,7 +463,8 @@ namespace Sovos.Scripting
 
     public void UnloadAppDomain()
     {
-      Invalidate();
+      lock(this)
+        Invalidate();
     }
 
     public string ProgramText
