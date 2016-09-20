@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "csharp-script-ut", "csharp-
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpCodeEvaluatorTestClass", "CSharpCodeEvaluatorTestClass\CSharpCodeEvaluatorTestClass.csproj", "{42A84748-BE8E-40BB-BE23-D14548A6D045}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleApp", "..\SampleApp\SampleApp\SampleApp.csproj", "{0FB77BFC-2439-4F81-A249-F4D87017E2AD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleApp", "..\SampleApp\SampleApp.csproj", "{0FB77BFC-2439-4F81-A249-F4D87017E2AD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
