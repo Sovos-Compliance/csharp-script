@@ -115,6 +115,11 @@ namespace Sovos.Scripting
       Dispose(true);
     }
 
+    public void DisposeClr()
+    {
+      Dispose(true);
+    }
+
     public void Dispose(bool disposing)
     {
       if (!disposing) return;
