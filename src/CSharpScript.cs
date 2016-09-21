@@ -94,10 +94,12 @@ namespace Sovos.Scripting
       };
       AddReferencedAssembly("SYSTEM.DLL");
       AddReferencedAssembly("SYSTEM.CORE.DLL");
+      AddReferencedAssembly("SYSTEM.DATA.DLL");
       AddReferencedAssembly("MICROSOFT.CSHARP.DLL");
+      AddReferencedAssembly("ORACLE.DATAACCESS.DLL");
       AddReferencedAssembly(Path.GetFileName(GetType().Assembly.Location));
       objectsInScope = new Dictionary<string, object>();
-      usesNamespaces = new List<string> { "System", "System.Dynamic", "Sovos.Scripting.CSharpScriptObjectBase", "System.Collections.Generic" };
+      usesNamespaces = new List<string> { "System", "System.Dynamic", "Sovos.Scripting.CSharpScriptObjectBase", "System.Collections.Generic", "Oracle.DataAccess.Client" };
       expressions = new List<string>();
       members = new List<string>();
       if (Expression != "")
