@@ -98,7 +98,11 @@ namespace Sovos.Scripting
       AddReferencedAssembly("MICROSOFT.CSHARP.DLL");
       AddReferencedAssembly(Path.GetFileName(GetType().Assembly.Location));
       objectsInScope = new Dictionary<string, object>();
-      usesNamespaces = new List<string> { "System", "System.Dynamic", "Sovos.Scripting.CSharpScriptObjectBase", "System.Collections.Generic" };
+      usesNamespaces = new List<string>();
+      AddUsedNamespace("System");
+      AddUsedNamespace("System.Dynamic");
+      AddUsedNamespace("Sovos.Scripting.CSharpScriptObjectBase");
+      AddUsedNamespace("System.Collections.Generic");
       expressions = new Dictionary<string, uint>();
       members = new List<string>();
       if (Expression != "")
