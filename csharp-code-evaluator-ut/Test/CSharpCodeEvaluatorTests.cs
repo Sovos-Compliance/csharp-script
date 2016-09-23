@@ -553,5 +553,18 @@ namespace csharp_code_evaluator_ut
         expression.Execute(1); // This will throw the final exception expected by the test
       }
     }
+
+    [Test]
+    public void AddSameUsedNamespaceTwice_Success()
+    {
+      using (var expression = new CSharpScript())
+      {
+        expression.AddUsedNamespace("System.Collections");
+        expression.AddUsedNamespace("System.Collections");
+        expression.GenerateCode();
+        expression.Compile();
+        Assert.True(true); // If we go here with no exception, we are good
+      }
+    }
   }
 }
