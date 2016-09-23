@@ -88,7 +88,7 @@ namespace csharp_code_evaluator_ut
 
     [Test]
     [ExpectedException("Sovos.Scripting.CSharpScriptException")]
-    public void ExpressionWithSameParameterTwice_Fails()
+    public void ExpressionWithSameParameterTwice_Failure()
     {
       using (var expression = new CSharpScript("1 + a + a"))
       {
@@ -125,7 +125,7 @@ namespace csharp_code_evaluator_ut
 
     [Test]
     [ExpectedException("Sovos.Scripting.CSharpScriptException")]
-    public void ReplacedNonExistingLocalObject_Fails()
+    public void ReplacedNonExistingLocalObject_Failure()
     {
       using (var expression = new CSharpScript("1 + obj.int_Field"))
       {
@@ -200,7 +200,7 @@ namespace csharp_code_evaluator_ut
 
     [Test]
     [ExpectedException("System.Data.InvalidExpressionException")]
-    public void ExpressionWithSyntaxError_Fails()
+    public void ExpressionWithSyntaxError_Failure()
     {
       using (var expression = new CSharpScript("1 + obj.int_Field"))
         expression.Compile();
@@ -283,8 +283,8 @@ namespace csharp_code_evaluator_ut
     }
 
     [Test]
-    [ExpectedException("System.Exception")]
-    public void RunNonExistingExpressionNumber_Fails()
+    [ExpectedException("System.Exception", ExpectedMessage = "Invalid exprNo parameter")]
+    public void RunNonExistingExpressionNumber_Failure()
     {
       using (var expression = new CSharpScript())
         expression.Execute(2);
@@ -527,6 +527,30 @@ namespace csharp_code_evaluator_ut
         script.ReplaceObjectInScope(obj_a, "i", 2);
         Assert.AreEqual(7, script.Execute(obj_a));
         Assert.AreEqual(11, script.Execute(obj_b));
+      }
+    }
+
+    [Test]
+    public void AddSameExpressionTwice_Success()
+    {
+      using (var expression = new CSharpScript())
+      {
+        Assert.AreEqual(0, expression.AddExpression("1 + 1"));
+        Assert.AreEqual(0, expression.AddExpression("1 + 1"));
+        Assert.AreEqual(2, expression.Execute());
+      }
+    }
+
+    [Test]
+    [ExpectedException("System.Exception", ExpectedMessage = "Invalid exprNo parameter")]
+    public void AddSameExpressionTwiceAssumeDuplication_Failure()
+    {
+      using (var expression = new CSharpScript())
+      {
+        Assert.AreEqual(0, expression.AddExpression("1 + 1"));
+        Assert.AreEqual(0, expression.AddExpression(" 1 + 1 "));
+        Assert.AreEqual(2, expression.Execute());
+        expression.Execute(1); // This will throw the final exception expected by the test
       }
     }
   }

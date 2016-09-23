@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Dynamic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Microsoft.CSharp;
 using Sovos.Infrastructure;
@@ -70,7 +71,7 @@ namespace Sovos.Scripting
     #region Private Fields
     private State state;
     private uint expressionCount;
-    private readonly List<string> expressions;
+    private readonly Dictionary<string, uint> expressions;
     private readonly List<string> members;
     private readonly CompilerParameters compilerParameters;
     private readonly Dictionary<string, object> objectsInScope;
@@ -98,7 +99,7 @@ namespace Sovos.Scripting
       AddReferencedAssembly(Path.GetFileName(GetType().Assembly.Location));
       objectsInScope = new Dictionary<string, object>();
       usesNamespaces = new List<string> { "System", "System.Dynamic", "Sovos.Scripting.CSharpScriptObjectBase", "System.Collections.Generic" };
-      expressions = new List<string>();
+      expressions = new Dictionary<string, uint>();
       members = new List<string>();
       if (Expression != "")
         AddExpression(Expression);
@@ -188,7 +189,10 @@ namespace Sovos.Scripting
       InvalidateIfCompiled();
       lock (this)
       {
-        expressions.Add(Expression);
+        uint expressionId;
+        if (expressions.TryGetValue(Expression, out expressionId))
+          return expressionId;
+        expressions.Add(Expression, expressionCount);
         return expressionCount++;
       }
     }
@@ -265,17 +269,17 @@ namespace Sovos.Scripting
     #region Public Methods and properties
     public uint AddExpression(string Expression)
     {
-      return AddCode("return " + Expression);
+      return AddCode("return " + Expression.Trim());
     }
 
     public uint AddVoidReturnCodeSnippet(string Expression)
     {
-      return AddCode(Expression + ";return null");
+      return AddCode(Expression.Trim() + ";return null");
     }
 
     public uint AddCodeSnippet(string Expression)
     {
-      return AddCode(Expression);
+      return AddCode(Expression.Trim());
     }
     
     public void AddMember(string body)
@@ -366,7 +370,11 @@ namespace Sovos.Scripting
         sb += "public override object Eval(uint exprNo) {\r\n";
         sb += "switch(exprNo) {\r\n";
         var i = 0;
-        foreach (var expr in expressions)
+        var expressionsList = expressions
+          .OrderBy(kvp => kvp.Value)
+          .Select(kvp => kvp.Key)
+          .ToList();
+        foreach (var expr in expressionsList)
         {
           sb += "case ";
           sb += i++.ToString();
