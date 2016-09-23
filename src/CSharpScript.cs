@@ -370,11 +370,10 @@ namespace Sovos.Scripting
         sb += "public override object Eval(uint exprNo) {\r\n";
         sb += "switch(exprNo) {\r\n";
         var i = 0;
-        var expressionsList = expressions
+        var expressionsSortedIterator = expressions
           .OrderBy(kvp => kvp.Value)
-          .Select(kvp => kvp.Key)
-          .ToList();
-        foreach (var expr in expressionsList)
+          .Select(kvp => kvp.Key);
+        foreach (var expr in expressionsSortedIterator)
         {
           sb += "case ";
           sb += i++.ToString();
