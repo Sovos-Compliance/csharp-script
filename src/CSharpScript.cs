@@ -71,11 +71,11 @@ namespace Sovos.Scripting
     #region Private Fields
     private State state;
     private uint expressionCount;
-    private readonly Dictionary<string, uint> expressions;
-    private readonly List<string> members;
+    private readonly IDictionary<string, uint> expressions;
+    private readonly ICollection<string> members;
     private readonly CompilerParameters compilerParameters;
-    private readonly Dictionary<string, object> objectsInScope;
-    private readonly List<string> usesNamespaces;
+    private readonly IDictionary<string, object> objectsInScope;
+    private readonly ICollection<string> usesNamespaces;
 
     // These fields will be != null when there's a valid compiled and prepared expressions
     private CompilerResults prg;
@@ -98,7 +98,7 @@ namespace Sovos.Scripting
       AddReferencedAssembly("MICROSOFT.CSHARP.DLL");
       AddReferencedAssembly(Path.GetFileName(GetType().Assembly.Location));
       objectsInScope = new Dictionary<string, object>();
-      usesNamespaces = new List<string>();
+      usesNamespaces = new HashSet<string>();
       AddUsedNamespace("System");
       AddUsedNamespace("System.Dynamic");
       AddUsedNamespace("Sovos.Scripting.CSharpScriptObjectBase");
