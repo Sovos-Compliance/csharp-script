@@ -326,7 +326,7 @@ namespace csharp_code_evaluator_ut
         var initialTicks = Environment.TickCount;
         for (uint i = 0; i < 1000000; i++)
           Assert.AreEqual(i, expression.Execute(1));
-        Assert.Less(Environment.TickCount - initialTicks, 2000); // 1 million executions in less than 2 seconds
+        Assert.Less(Environment.TickCount - initialTicks, 3000); // 1 million executions in less than 3 seconds
       }
     }
 
