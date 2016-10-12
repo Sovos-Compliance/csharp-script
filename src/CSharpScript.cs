@@ -310,7 +310,7 @@ namespace Sovos.Scripting
         if (objectsInScope.ContainsKey(name))
           throw new CSharpScriptException(string.Format("Object in scope named '{0}' already exists", name));
         objectsInScope.Add(name, obj);
-        AddReferencedAssembly(Path.GetFileName(obj.GetType().Assembly.Location));
+        AddReferencedAssembly(GetType().Assembly.Location);
         AddUsedNamespace(obj.GetType().Namespace);
       }
     }
