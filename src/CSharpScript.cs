@@ -382,6 +382,7 @@ namespace Sovos.Scripting
           sb += "case ";
           sb += i++.ToString();
           sb += ": ";
+          sb += "\r\n";
           sb += expr;
           sb += ";\r\n";
         }
