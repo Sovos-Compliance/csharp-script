@@ -19,7 +19,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>..\bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -29,7 +29,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>..\bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -41,16 +41,16 @@
     <Reference Include="System.Data" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\src\CSharpScript.cs">
+    <Compile Include="..\src\CSharpScript.cs">
       <Link>Refs\CSharpScript.cs</Link>
     </Compile>
-    <Compile Include="..\..\src\CSharpScriptObjectBase.cs">
+    <Compile Include="..\src\CSharpScriptObjectBase.cs">
       <Link>Refs\CSharpScriptObjectBase.cs</Link>
     </Compile>
-    <Compile Include="..\..\src\IntPtrConverter.cs">
+    <Compile Include="..\src\IntPtrConverter.cs">
       <Link>Refs\IntPtrConverter.cs</Link>
     </Compile>
-    <Compile Include="..\..\src\ObjectAddress.cs">
+    <Compile Include="..\src\ObjectAddress.cs">
       <Link>Refs\ObjectAddress.cs</Link>
     </Compile>
     <Compile Include="Src\Program.cs" />
@@ -60,7 +60,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\csharp-code-evaluator-ut\CSharpCodeEvaluatorTestClass\CSharpCodeEvaluatorTestClass.csproj">
+    <ProjectReference Include="..\csharp-code-evaluator-ut\CSharpCodeEvaluatorTestClass\CSharpCodeEvaluatorTestClass.csproj">
       <Project>{42a84748-be8e-40bb-be23-d14548a6d045}</Project>
       <Name>CSharpCodeEvaluatorTestClass</Name>
     </ProjectReference>

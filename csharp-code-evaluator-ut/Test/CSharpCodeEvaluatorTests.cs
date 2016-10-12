@@ -88,7 +88,7 @@ namespace csharp_code_evaluator_ut
 
     [Test]
     [ExpectedException("Sovos.Scripting.CSharpScriptException")]
-    public void ExpressionWithSameParameterTwice_Fails()
+    public void ExpressionWithSameParameterTwice_Failure()
     {
       using (var expression = new CSharpScript("1 + a + a"))
       {
@@ -125,7 +125,7 @@ namespace csharp_code_evaluator_ut
 
     [Test]
     [ExpectedException("Sovos.Scripting.CSharpScriptException")]
-    public void ReplacedNonExistingLocalObject_Fails()
+    public void ReplacedNonExistingLocalObject_Failure()
     {
       using (var expression = new CSharpScript("1 + obj.int_Field"))
       {
@@ -200,7 +200,7 @@ namespace csharp_code_evaluator_ut
 
     [Test]
     [ExpectedException("System.Data.InvalidExpressionException")]
-    public void ExpressionWithSyntaxError_Fails()
+    public void ExpressionWithSyntaxError_Failure()
     {
       using (var expression = new CSharpScript("1 + obj.int_Field"))
         expression.Compile();
@@ -216,7 +216,7 @@ namespace csharp_code_evaluator_ut
         var initialTicks = Environment.TickCount;
         for (obj.int_Field = 1; obj.int_Field < 1000000; obj.int_Field++)
           Assert.AreEqual(1 + obj.int_Field, expression.Execute());
-        Assert.Less(Environment.TickCount - initialTicks, 1000); // 1MM iterations should run in less than 1 second
+        Assert.Less(Environment.TickCount - initialTicks, 2000); // 1MM iterations should run in less than 1 second
       }
     }
 
@@ -283,8 +283,8 @@ namespace csharp_code_evaluator_ut
     }
 
     [Test]
-    [ExpectedException("System.Exception")]
-    public void RunNonExistingExpressionNumber_Fails()
+    [ExpectedException("System.Exception", ExpectedMessage = "Invalid exprNo parameter")]
+    public void RunNonExistingExpressionNumber_Failure()
     {
       using (var expression = new CSharpScript())
         expression.Execute(2);
@@ -326,7 +326,7 @@ namespace csharp_code_evaluator_ut
         var initialTicks = Environment.TickCount;
         for (uint i = 0; i < 1000000; i++)
           Assert.AreEqual(i, expression.Execute(1));
-        Assert.Less(Environment.TickCount - initialTicks, 2000); // 1 million executions in less than 2 seconds
+        Assert.Less(Environment.TickCount - initialTicks, 3000); // 1 million executions in less than 3 seconds
       }
     }
 
@@ -465,6 +465,105 @@ namespace csharp_code_evaluator_ut
         expression.AddExpression("global.a");
         Assert.AreEqual(null, expression.Invoke("Test", new object[] { 5 }));
         Assert.AreEqual(5, expression.Execute());
+      }
+    }
+
+    [Test]
+    public void CreateTwoObjectsMaintainingDifferentState_Success()
+    {
+      using (var script = new CSharpScript())
+      {
+        script.AddMember(
+          @"public void Test(int a) {  
+              global.a = a;                            
+            }");
+        script.AddExpression("global.a");
+        var obj_a = script.CreateScriptObject();
+        var obj_b = script.CreateScriptObject();
+        Assert.AreEqual(null, script.Invoke(obj_a, "Test", new object[] { 5 }));
+        Assert.AreEqual(null, script.Invoke(obj_b, "Test", new object[] { 10 }));
+        Assert.AreEqual(5, script.Execute(obj_a));
+        Assert.AreEqual(10, script.Execute(obj_b));
+      }
+    }
+
+    [Test]
+    public void CreateTwoObjectsWithObjectInScopeMaintainingDifferentState_Success()
+    {
+      using (var script = new CSharpScript())
+      {
+        script.AddMember(
+          @"public void Test(int a) {  
+              global.a = a;                            
+            }");
+        script.AddExpression("global.a + i");
+        script.AddObjectInScope("i", 1);
+        var obj_a = script.CreateScriptObject();
+        var obj_b = script.CreateScriptObject();
+        Assert.AreEqual(null, script.Invoke(obj_a, "Test", new object[] { 5 }));
+        Assert.AreEqual(null, script.Invoke(obj_b, "Test", new object[] { 10 }));
+        Assert.AreEqual(6, script.Execute(obj_a));
+        Assert.AreEqual(11, script.Execute(obj_b));
+      }
+    }
+
+    [Test]
+    public void CreateTwoObjectsWithObjectInScopeResettingIt_Success()
+    {
+      using (var script = new CSharpScript())
+      {
+        script.AddMember(
+          @"public void Test(int a) {  
+              global.a = a;                            
+            }");
+        script.AddExpression("global.a + i");
+        script.AddObjectInScope("i", 1);
+        var obj_a = script.CreateScriptObject();
+        var obj_b = script.CreateScriptObject();
+        Assert.AreEqual(null, script.Invoke(obj_a, "Test", new object[] { 5 }));
+        Assert.AreEqual(null, script.Invoke(obj_b, "Test", new object[] { 10 }));
+        Assert.AreEqual(6, script.Execute(obj_a));
+        Assert.AreEqual(11, script.Execute(obj_b));
+        script.ReplaceObjectInScope(obj_a, "i", 2);
+        Assert.AreEqual(7, script.Execute(obj_a));
+        Assert.AreEqual(11, script.Execute(obj_b));
+      }
+    }
+
+    [Test]
+    public void AddSameExpressionTwice_Success()
+    {
+      using (var expression = new CSharpScript())
+      {
+        Assert.AreEqual(0, expression.AddExpression("1 + 1"));
+        Assert.AreEqual(0, expression.AddExpression("1 + 1"));
+        Assert.AreEqual(2, expression.Execute());
+      }
+    }
+
+    [Test]
+    [ExpectedException("System.Exception", ExpectedMessage = "Invalid exprNo parameter")]
+    public void AddSameExpressionTwiceAssumeDuplication_Failure()
+    {
+      using (var expression = new CSharpScript())
+      {
+        Assert.AreEqual(0, expression.AddExpression("1 + 1"));
+        Assert.AreEqual(0, expression.AddExpression(" 1 + 1 "));
+        Assert.AreEqual(2, expression.Execute());
+        expression.Execute(1); // This will throw the final exception expected by the test
+      }
+    }
+
+    [Test]
+    public void AddSameUsedNamespaceTwice_Success()
+    {
+      using (var expression = new CSharpScript())
+      {
+        expression.AddUsedNamespace("System.Collections");
+        expression.AddUsedNamespace("System.Collections");
+        expression.GenerateCode();
+        expression.Compile();
+        Assert.True(true); // If we go here with no exception, we are good
       }
     }
   }
