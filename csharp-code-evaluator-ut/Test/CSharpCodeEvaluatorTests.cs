@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using Sovos.Scripting;
 using SampleApp;
+using Sovos.Scripting.CSharpScriptObjectBase;
 
 namespace csharp_code_evaluator_ut
 {
@@ -87,7 +88,7 @@ namespace csharp_code_evaluator_ut
     }
 
     [Test]
-    [ExpectedException("Sovos.Scripting.CSharpScriptException")]
+    [ExpectedException("Sovos.Scripting.CSharpScriptObjectBase.CSharpScriptException")]
     public void ExpressionWithSameParameterTwice_Failure()
     {
       using (var expression = new CSharpScript("1 + a + a"))
@@ -124,7 +125,7 @@ namespace csharp_code_evaluator_ut
     }
 
     [Test]
-    [ExpectedException("Sovos.Scripting.CSharpScriptException")]
+    [ExpectedException("Sovos.Scripting.CSharpScriptObjectBase.CSharpScriptException")]
     public void ReplacedNonExistingLocalObject_Failure()
     {
       using (var expression = new CSharpScript("1 + obj.int_Field"))
@@ -484,6 +485,83 @@ namespace csharp_code_evaluator_ut
         Assert.AreEqual(null, script.Invoke(obj_b, "Test", new object[] { 10 }));
         Assert.AreEqual(5, script.Execute(obj_a));
         Assert.AreEqual(10, script.Execute(obj_b));
+      }
+    }
+
+    [Test]
+    public void CreateObjectOfNestedClassWithinScriptObject_Success()
+    {
+      using (var script = new CSharpScript())
+      {
+        script.AddMember(
+          @"public class TestClass {  
+              public int a = 10;  
+              public TestClass() {
+              }                          
+            }
+          ");
+        dynamic obj = script.CreateScriptObject("TestClass");
+        Assert.AreEqual(10, obj.a);
+      }
+    }
+
+    [Test]
+    public void CreateObjectOfNestedClassWithinScriptObjectUsingSeparateAppDomain_Success()
+    {
+      using (var script = new CSharpScript())
+      {
+        script.ExecuteInSeparateAppDomain = true;
+        script.AddMember(
+          @"public class TestClass : CSharpScriptObjectBase {  
+              public int _a = 10;  
+              public TestClass() {
+              }           
+              public int a() {
+                return _a;
+              }               
+            }
+          ");
+        ICSharpScriptObjectAccessor obj = (ICSharpScriptObjectAccessor)script.CreateScriptObject("TestClass");
+        Assert.AreEqual(10, obj.Invoke("a", null));
+      }
+    }
+
+    [Test]
+    public void CreateExceptionObjectOfNestedClassWithinScriptAndThrow_Success()
+    {
+      using (var script = new CSharpScript())
+      {
+        script.AddMember(
+          @"[Serializable]
+            public class ETestClass : CSharpScriptException {}
+          ");
+        var obj = (Exception)script.CreateScriptObject("ETestClass");
+        var setter = (ICSharpScriptException)obj;
+        setter.SetMessage("Hello World");
+        try
+        {
+          throw obj;
+        }
+        catch(Exception e)
+        {
+          Assert.AreEqual("ETestClass", e.GetType().Name);
+          Assert.AreEqual("Hello World", e.Message);
+        }
+      }
+    }
+
+    [Test]
+    [ExpectedException("System.Runtime.Serialization.SerializationException")]
+    public void CreateExceptionObjectOfNestedClassWithinScriptSeparateAppDomain_Failure()
+    {
+      using (var script = new CSharpScript())
+      {
+        script.ExecuteInSeparateAppDomain = true;
+        script.AddMember(
+          @"[Serializable]
+            public class ETestClass : Exception {}
+          ");
+        script.CreateScriptObject("ETestClass");
       }
     }
 
