@@ -44,6 +44,9 @@
     <Compile Include="..\src\CSharpScript.cs">
       <Link>Refs\CSharpScript.cs</Link>
     </Compile>
+    <Compile Include="..\src\CSharpScriptException.cs">
+      <Link>Refs\CSharpScriptException.cs</Link>
+    </Compile>
     <Compile Include="..\src\CSharpScriptObjectBase.cs">
       <Link>Refs\CSharpScriptObjectBase.cs</Link>
     </Compile>
