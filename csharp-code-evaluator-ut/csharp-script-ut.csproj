@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -45,22 +45,25 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\SampleApp\Src\SovosExpandoBuilder.cs">
-      <Link>Src\SovosExpandoBuilder.cs</Link>
+      <Link>Refs\SampleApp\SovosExpandoBuilder.cs</Link>
     </Compile>
     <Compile Include="..\src\CSharpScript.cs">
       <Link>Refs\CSharpScript.cs</Link>
+    </Compile>
+    <Compile Include="..\src\CSharpScriptException.cs">
+      <Link>Refs\CSharpScriptException.cs</Link>
     </Compile>
     <Compile Include="..\src\CSharpScriptObjectBase.cs">
       <Link>Refs\CSharpScriptObjectBase.cs</Link>
     </Compile>
     <Compile Include="..\src\IntPtrConverter.cs">
-      <Link>Src\IntPtrConverter.cs</Link>
+      <Link>Refs\IntPtrConverter.cs</Link>
     </Compile>
     <Compile Include="..\src\ObjectAddress.cs">
-      <Link>Src\ObjectAddress.cs</Link>
+      <Link>Refs\ObjectAddress.cs</Link>
     </Compile>
     <Compile Include="..\src\SovosExpandoObject.cs">
-      <Link>Src\SovosExpandoObject.cs</Link>
+      <Link>Refs\SovosExpandoObject.cs</Link>
     </Compile>
     <Compile Include="Test\CSharpCodeEvaluatorTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
