@@ -4,10 +4,14 @@ using Sovos.Infrastructure;
 
 namespace Sovos.Scripting.CSharpScriptObjectBase
 {
-  public interface ICSharpScriptObjectAccessor
+  public interface ICSharpScriptObjectFieldAccesor
   {
     void SetField(string fieldName, KeyValuePair<IntPtr, int> obj);
     void SetField(string fieldName, object obj);
+  }
+
+  public interface ICSharpScriptObjectAccessor : ICSharpScriptObjectFieldAccesor
+  {
     object Eval(uint ExprNo);
     object Invoke(string methodName, object[] args);
   }
@@ -27,7 +31,10 @@ namespace Sovos.Scripting.CSharpScriptObjectBase
       GetType().GetField(fieldName).SetValue(this, obj);
     }
 
-    public abstract object Eval(uint ExprNo);
+    public virtual object Eval(uint ExprNo)
+    {
+      return null;
+    }
 
     public object Invoke(string methodName, object[] args)
     {
