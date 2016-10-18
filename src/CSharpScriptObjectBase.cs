@@ -25,7 +25,7 @@ namespace Sovos.Scripting.CSharpScriptObjectBase
     ICSharpScriptObjectExpressionEvaler, ICSharpScriptObjectMethodInvoker, ICSharpScriptObjectFieldAccesor
   {
     private static readonly PtrConverter<object> converter = new PtrConverter<object>();
-    private Dictionary<string, MethodInfo> _cachedMethodsInfos = new Dictionary<string, MethodInfo>(); 
+    private readonly Dictionary<string, MethodInfo> _cachedMethodsInfos = new Dictionary<string, MethodInfo>(); 
     public void SetField(string fieldName, KeyValuePair<IntPtr, int> obj)
     {
       if (ObjectAddress.GCCount != obj.Value)
