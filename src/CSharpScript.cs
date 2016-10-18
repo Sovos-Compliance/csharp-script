@@ -76,7 +76,7 @@ namespace Sovos.Scripting
 
     // These fields will be != null when there's a valid compiled and prepared expressions
     private CompilerResults prg;
-    private ICSharpScriptObjectAccessor holderObjectAccesor;
+    private object holderObjectAccesor;
     private string programText;
     private AppDomain appDomain;
     private bool executeInSeparateAppDomain;
@@ -198,7 +198,7 @@ namespace Sovos.Scripting
       }
     }
 
-    private void SetHostOjectField(ICSharpScriptObjectAccessor scriptObject, string fieldName, object obj)
+    private void SetHostOjectField(ICSharpScriptObjectFieldAccesor scriptObject, string fieldName, object obj)
     {
       if (scriptObject == null) return;
       while (true)
@@ -219,7 +219,7 @@ namespace Sovos.Scripting
       }
     }
 
-    private void SetObjectsInScope(ICSharpScriptObjectAccessor scriptObject)
+    private void SetObjectsInScope(ICSharpScriptObjectFieldAccesor scriptObject)
     {
       lock (this)
         foreach (var obj in objectsInScope)
@@ -315,7 +315,7 @@ namespace Sovos.Scripting
 
     public void ReplaceObjectInScope(object scriptObject, string name, object obj)
     {
-      SetHostOjectField((ICSharpScriptObjectAccessor) scriptObject, name, obj);
+      SetHostOjectField((ICSharpScriptObjectFieldAccesor) scriptObject, name, obj);
     }
 
     public void ReplaceObjectInScope(string name, object obj)
@@ -428,10 +428,10 @@ namespace Sovos.Scripting
 
         if (buildDefaultObject)
         {
-          holderObjectAccesor = (ICSharpScriptObjectAccessor) BuildObject("CodeEvaler");
+          holderObjectAccesor = BuildObject("CodeEvaler");
           if (holderObjectAccesor == null)
             throw new NullReferenceException("Default host object is null");
-          SetObjectsInScope(holderObjectAccesor);
+          SetObjectsInScope((ICSharpScriptObjectFieldAccesor)holderObjectAccesor);
         }
         state = State.Prepared;
       }
@@ -441,7 +441,7 @@ namespace Sovos.Scripting
     {
       Prepare(false);
       var obj = BuildObject("CodeEvaler");
-      SetObjectsInScope((ICSharpScriptObjectAccessor) obj);
+      SetObjectsInScope((ICSharpScriptObjectFieldAccesor) obj);
       return obj;
     }
 
@@ -464,7 +464,7 @@ namespace Sovos.Scripting
     public object Execute(object hostObject, uint exprNo = 0)
     {
       Prepare();
-      return ((ICSharpScriptObjectAccessor)hostObject).Eval(exprNo);
+      return ((ICSharpScriptObjectExpressionEvaler)hostObject).Eval(exprNo);
     }
 
     public object Execute(uint exprNo = 0)
@@ -477,7 +477,7 @@ namespace Sovos.Scripting
     public object Invoke(object hostObject, string methodName, object[] args)
     {
       Prepare();
-      return ((ICSharpScriptObjectAccessor)hostObject).Invoke(methodName, args);
+      return ((ICSharpScriptObjectMethodInvoker)hostObject).Invoke(methodName, args);
     }
 
     public object Invoke(string methodName, object[] args)

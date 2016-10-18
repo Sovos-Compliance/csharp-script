@@ -412,7 +412,7 @@ namespace csharp_code_evaluator_ut
     }
 
     [Test]
-    public void InvokeMethod_Success()
+    public void InvokeMethodTwice_Success()
     {
       using (var expression = new CSharpScript())
       {
@@ -420,6 +420,7 @@ namespace csharp_code_evaluator_ut
           @"public int Test() {
               return 10;            
             }");
+        Assert.AreEqual(10, expression.Invoke("Test", null));
         Assert.AreEqual(10, expression.Invoke("Test", null));
       }
     }
@@ -521,7 +522,7 @@ namespace csharp_code_evaluator_ut
               }               
             }
           ");
-        ICSharpScriptObjectAccessor obj = (ICSharpScriptObjectAccessor)script.CreateScriptObject("TestClass");
+        var obj = (ICSharpScriptObjectMethodInvoker)script.CreateScriptObject("TestClass");
         Assert.AreEqual(10, obj.Invoke("a", null));
       }
     }
@@ -536,8 +537,8 @@ namespace csharp_code_evaluator_ut
             public class ETestClass : CSharpScriptException {}
           ");
         var obj = (Exception)script.CreateScriptObject("ETestClass");
-        var setter = (ICSharpScriptException)obj;
-        setter.SetMessage("Hello World");
+        var setter = (ICSharpScriptObjectMethodInvoker)obj;
+        setter.Invoke("SetMessage", new object[]{"Hello World"});
         try
         {
           throw obj;
