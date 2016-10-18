@@ -537,8 +537,12 @@ namespace csharp_code_evaluator_ut
             public class ETestClass : CSharpScriptException {}
           ");
         var obj = (Exception)script.CreateScriptObject("ETestClass");
+        /* access SetMessage() using ICSharpScriptObjectMethodInvoker */
         var setter = (ICSharpScriptObjectMethodInvoker)obj;
         setter.Invoke("SetMessage", new object[]{"Hello World"});
+        /* access SetMessage() using dynamic object */
+        dynamic dynObj = obj;
+        dynObj.SetMessage("Hello World");
         try
         {
           throw obj;
