@@ -21,7 +21,7 @@ namespace Sovos.Scripting.CSharpScriptObjectBase
     object Eval(uint ExprNo);
   }
 
-  public abstract class CSharpScriptObjectBase : MarshalByRefObject, 
+  public class CSharpScriptObjectBase : MarshalByRefObject, 
     ICSharpScriptObjectExpressionEvaler, ICSharpScriptObjectMethodInvoker, ICSharpScriptObjectFieldAccesor
   {
     private static readonly PtrConverter<object> converter = new PtrConverter<object>();

@@ -66,6 +66,7 @@ namespace Sovos.Scripting
     #region Private Fields
 
     private const string SCRIPT_NAMESPACE = "Sovos.CodeEvaler";
+    private const string SCRIPT_CONTAINER_CLASSNAME = "CodeEvaler";
     private State state;
     private uint expressionCount;
     private readonly IDictionary<string, uint> expressions;
@@ -354,14 +355,18 @@ namespace Sovos.Scripting
         sb += "namespace ";
         sb += SCRIPT_NAMESPACE;
         sb += " {\r\n";
-        sb += "public class CodeEvaler : CSharpScriptObjectBase {\r\n";
+        sb += "public class ";
+        sb += SCRIPT_CONTAINER_CLASSNAME;
+        sb += " : CSharpScriptObjectBase {\r\n";
         sb += "private dynamic global;\r\n";
         foreach (var body in members)
         {
           sb += body;
           sb += "\r\n";
         }
-        sb += "public CodeEvaler() {\r\n";
+        sb += "public ";
+        sb += SCRIPT_CONTAINER_CLASSNAME;
+        sb += "() {\r\n";
         sb += "global=new ExpandoObject();\r\n}\r\n";
         foreach (var objInScope in objectsInScope)
         {
@@ -428,7 +433,7 @@ namespace Sovos.Scripting
 
         if (buildDefaultObject)
         {
-          holderObjectAccesor = BuildObject("CodeEvaler");
+          holderObjectAccesor = BuildObject(SCRIPT_CONTAINER_CLASSNAME);
           if (holderObjectAccesor == null)
             throw new NullReferenceException("Default host object is null");
           SetObjectsInScope((ICSharpScriptObjectFieldAccesor)holderObjectAccesor);
@@ -440,7 +445,7 @@ namespace Sovos.Scripting
     public object CreateScriptObject()
     {
       Prepare(false);
-      var obj = BuildObject("CodeEvaler");
+      var obj = BuildObject(SCRIPT_CONTAINER_CLASSNAME);
       SetObjectsInScope((ICSharpScriptObjectFieldAccesor) obj);
       return obj;
     }
@@ -451,7 +456,7 @@ namespace Sovos.Scripting
       /* Note that to build the object of the nested class within our core script class, the class
          name must be denoted with + (plus) sign after the containing class. Ex. "OuterClass+InnerClass".
          I tried using OuterClass.InnerClass and reflection code can't build the object */
-      var obj = BuildObject("CodeEvaler+" + className);
+      var obj = BuildObject(string.Format("{0}+{1}", SCRIPT_CONTAINER_CLASSNAME, className));
       return obj;
     }
 
