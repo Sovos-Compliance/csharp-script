@@ -1,20 +1,31 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Sovos.Infrastructure;
 
 namespace Sovos.Scripting.CSharpScriptObjectBase
 {
-  public interface ICSharpScriptObjectAccessor
+  public interface ICSharpScriptObjectFieldAccesor
   {
     void SetField(string fieldName, KeyValuePair<IntPtr, int> obj);
     void SetField(string fieldName, object obj);
-    object Eval(uint ExprNo);
+  }
+
+  public interface ICSharpScriptObjectMethodInvoker
+  {
     object Invoke(string methodName, object[] args);
   }
 
-  public abstract class CSharpScriptObjectBase : MarshalByRefObject, ICSharpScriptObjectAccessor
+  public interface ICSharpScriptObjectExpressionEvaler
+  {
+    object Eval(uint ExprNo);
+  }
+
+  public class CSharpScriptObjectBase : MarshalByRefObject, 
+    ICSharpScriptObjectExpressionEvaler, ICSharpScriptObjectMethodInvoker, ICSharpScriptObjectFieldAccesor
   {
     private static readonly PtrConverter<object> converter = new PtrConverter<object>();
+    private readonly Dictionary<string, MethodInfo> _cachedMethodsInfos = new Dictionary<string, MethodInfo>(); 
     public void SetField(string fieldName, KeyValuePair<IntPtr, int> obj)
     {
       if (ObjectAddress.GCCount != obj.Value)
@@ -27,14 +38,21 @@ namespace Sovos.Scripting.CSharpScriptObjectBase
       GetType().GetField(fieldName).SetValue(this, obj);
     }
 
-    public abstract object Eval(uint ExprNo);
+    public virtual object Eval(uint ExprNo)
+    {
+      return null;
+    }
 
     public object Invoke(string methodName, object[] args)
     {
-      var method = GetType().GetMethod(methodName);
-      if (method != null)
+      MethodInfo method;
+      if (_cachedMethodsInfos.TryGetValue(methodName, out method))
         return method.Invoke(this, args);
-      throw new MissingMethodException(string.Format("Method \"{0}\"not found", methodName));
+      method = GetType().GetMethod(methodName);
+      if(method == null)
+        throw new MissingMethodException(string.Format("Method \"{0}\"not found", methodName));
+      _cachedMethodsInfos.Add(methodName, method);
+      return method.Invoke(this, args);
     }
   }
 }

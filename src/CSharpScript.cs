@@ -30,11 +30,6 @@ using Sovos.Scripting.CSharpScriptObjectBase;
 
 namespace Sovos.Scripting
 {
-  public class CSharpScriptException : Exception
-  {
-    public CSharpScriptException(string msg) : base(msg) {}
-  }
- 
   public class CSharpScript : IDisposable
   {
     #region Private CSharpScript types
@@ -69,6 +64,9 @@ namespace Sovos.Scripting
     #endregion
 
     #region Private Fields
+
+    private const string SCRIPT_NAMESPACE = "Sovos.CodeEvaler";
+    private const string SCRIPT_CONTAINER_CLASSNAME = "CodeEvaler";
     private State state;
     private uint expressionCount;
     private readonly IDictionary<string, uint> expressions;
@@ -79,7 +77,7 @@ namespace Sovos.Scripting
 
     // These fields will be != null when there's a valid compiled and prepared expressions
     private CompilerResults prg;
-    private ICSharpScriptObjectAccessor holderObjectAccesor;
+    private object holderObjectAccesor;
     private string programText;
     private AppDomain appDomain;
     private bool executeInSeparateAppDomain;
@@ -201,7 +199,7 @@ namespace Sovos.Scripting
       }
     }
 
-    private void SetHostOjectField(ICSharpScriptObjectAccessor scriptObject, string fieldName, object obj)
+    private void SetHostOjectField(ICSharpScriptObjectFieldAccesor scriptObject, string fieldName, object obj)
     {
       if (scriptObject == null) return;
       while (true)
@@ -222,21 +220,22 @@ namespace Sovos.Scripting
       }
     }
 
-    private void SetObjectsInScope(ICSharpScriptObjectAccessor scriptObject)
+    private void SetObjectsInScope(ICSharpScriptObjectFieldAccesor scriptObject)
     {
       lock (this)
         foreach (var obj in objectsInScope)
           SetHostOjectField(scriptObject, obj.Key, obj.Value);
     }
 
-    private object BuildObject()
+    private object BuildObject(string className)
     {
+      var fullyQualifiedClassName = string.Format("{0}.{1}", SCRIPT_NAMESPACE, className);
       if (!executeInSeparateAppDomain)
-        return prg.CompiledAssembly.CreateInstance("Sovos.CodeEvaler.CodeEvaler");
+        return prg.CompiledAssembly.CreateInstance(fullyQualifiedClassName);
       lock (this)
       {
         // ToDo: Do we need lock for this?
-        return appDomain.CreateInstanceFromAndUnwrap(prg.PathToAssembly, "Sovos.CodeEvaler.CodeEvaler");
+        return appDomain.CreateInstanceFromAndUnwrap(prg.PathToAssembly, fullyQualifiedClassName);
       }
     }
 
@@ -317,7 +316,7 @@ namespace Sovos.Scripting
 
     public void ReplaceObjectInScope(object scriptObject, string name, object obj)
     {
-      SetHostOjectField((ICSharpScriptObjectAccessor) scriptObject, name, obj);
+      SetHostOjectField((ICSharpScriptObjectFieldAccesor) scriptObject, name, obj);
     }
 
     public void ReplaceObjectInScope(string name, object obj)
@@ -353,15 +352,21 @@ namespace Sovos.Scripting
           sb += _namespace;
           sb += ";\r\n";
         }
-        sb += "namespace Sovos.CodeEvaler {\r\n";
-        sb += "public class CodeEvaler : CSharpScriptObjectBase {\r\n";
+        sb += "namespace ";
+        sb += SCRIPT_NAMESPACE;
+        sb += " {\r\n";
+        sb += "public class ";
+        sb += SCRIPT_CONTAINER_CLASSNAME;
+        sb += " : CSharpScriptObjectBase {\r\n";
         sb += "private dynamic global;\r\n";
         foreach (var body in members)
         {
           sb += body;
           sb += "\r\n";
         }
-        sb += "public CodeEvaler() {\r\n";
+        sb += "public ";
+        sb += SCRIPT_CONTAINER_CLASSNAME;
+        sb += "() {\r\n";
         sb += "global=new ExpandoObject();\r\n}\r\n";
         foreach (var objInScope in objectsInScope)
         {
@@ -429,10 +434,10 @@ namespace Sovos.Scripting
 
         if (buildDefaultObject)
         {
-          holderObjectAccesor = (ICSharpScriptObjectAccessor) BuildObject();
+          holderObjectAccesor = BuildObject(SCRIPT_CONTAINER_CLASSNAME);
           if (holderObjectAccesor == null)
             throw new NullReferenceException("Default host object is null");
-          SetObjectsInScope(holderObjectAccesor);
+          SetObjectsInScope((ICSharpScriptObjectFieldAccesor)holderObjectAccesor);
         }
         state = State.Prepared;
       }
@@ -441,8 +446,18 @@ namespace Sovos.Scripting
     public object CreateScriptObject()
     {
       Prepare(false);
-      var obj = BuildObject();
-      SetObjectsInScope((ICSharpScriptObjectAccessor) obj);
+      var obj = BuildObject(SCRIPT_CONTAINER_CLASSNAME);
+      SetObjectsInScope((ICSharpScriptObjectFieldAccesor) obj);
+      return obj;
+    }
+
+    public object CreateScriptObject(string className)
+    {
+      Prepare(false);
+      /* Note that to build the object of the nested class within our core script class, the class
+         name must be denoted with + (plus) sign after the containing class. Ex. "OuterClass+InnerClass".
+         I tried using OuterClass.InnerClass and reflection code can't build the object */
+      var obj = BuildObject(string.Format("{0}+{1}", SCRIPT_CONTAINER_CLASSNAME, className));
       return obj;
     }
 
@@ -455,7 +470,7 @@ namespace Sovos.Scripting
     public object Execute(object hostObject, uint exprNo = 0)
     {
       Prepare();
-      return ((ICSharpScriptObjectAccessor)hostObject).Eval(exprNo);
+      return ((ICSharpScriptObjectExpressionEvaler)hostObject).Eval(exprNo);
     }
 
     public object Execute(uint exprNo = 0)
@@ -468,7 +483,7 @@ namespace Sovos.Scripting
     public object Invoke(object hostObject, string methodName, object[] args)
     {
       Prepare();
-      return ((ICSharpScriptObjectAccessor)hostObject).Invoke(methodName, args);
+      return ((ICSharpScriptObjectMethodInvoker)hostObject).Invoke(methodName, args);
     }
 
     public object Invoke(string methodName, object[] args)
